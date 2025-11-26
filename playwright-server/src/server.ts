@@ -9,6 +9,7 @@ import { ProfileCache } from './ProfileCache';
 import { DropdownFiller } from './fillers/DropdownFiller';
 import { LEARNING_SCRIPT } from './scripts/learning-script';
 import { applyStealthMode, createStealthContext, waitForPageReady, dismissOverlays } from './utils/stealth';
+import { profileToCustomAnswers, generateExtensionExport } from './utils/profile-sync';
 
 dotenv.config();
 
@@ -198,6 +199,17 @@ app.post('/learn-form', async (req, res) => {
         // Save profile
         profileCache.saveProfile(url, 'learned', learnedFields);
         console.log(`💾 Profile saved for future use!`);
+        
+        // Convert to extension format
+        const customAnswers = profileToCustomAnswers(learnedFields);
+        const customCount = Object.keys(customAnswers).length;
+        
+        if (customCount > 0) {
+          console.log(`\n📤 Extension Integration:`);
+          console.log(`   ${customCount} custom answers ready for extension`);
+          console.log(`   Access at: http://localhost:3000/profile/${encodeURIComponent(url)}`);
+          console.log(`   Or download: http://localhost:3000/export/${encodeURIComponent(url)}`);
+        }
       } else {
         console.log('⚠️  No fields learned (form not filled?)');
       }
@@ -570,6 +582,62 @@ function matchLabelToValue(label: string, personalData: any): string | null {
   
   return null;
 }
+
+// Get profile for extension use
+app.get('/profile/:url', async (req, res) => {
+  try {
+    const url = decodeURIComponent(req.params.url);
+    const profile = profileCache.getProfile(url);
+    
+    if (!profile) {
+      return res.status(404).json({
+        success: false,
+        error: 'No profile found for this URL'
+      });
+    }
+    
+    // Convert to extension format
+    const customAnswers = profileToCustomAnswers(profile.fields);
+    
+    res.json({
+      success: true,
+      customAnswers,
+      fieldCount: Object.keys(customAnswers).length,
+      learnedAt: profile.metadata.createdAt
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Export profile as JSON for manual import
+app.get('/export/:url', async (req, res) => {
+  try {
+    const url = decodeURIComponent(req.params.url);
+    const profile = profileCache.getProfile(url);
+    
+    if (!profile) {
+      return res.status(404).json({
+        success: false,
+        error: 'No profile found for this URL'
+      });
+    }
+    
+    const exportData = generateExtensionExport(profile.fields);
+    
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="magicfill-profile-${Date.now()}.json"`);
+    res.send(exportData);
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
 
 // Shutdown handler
 process.on('SIGINT', async () => {
