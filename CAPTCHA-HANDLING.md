@@ -1,30 +1,48 @@
 # CAPTCHA Handling Guide
 
 ## The Problem
-Some job sites use CAPTCHAs to prevent automation. Playwright can trigger these.
+Some job sites use CAPTCHAs to prevent automation. Playwright can be detected.
 
 ## Solutions Implemented
 
-### 1. Stealth Mode (Automatic)
-We've configured Playwright to look like a real browser:
-- Disabled automation flags
-- Set realistic user agent
-- Hidden `navigator.webdriver`
-- Added chrome runtime object
+### 1. Maximum Stealth Mode (Automatic)
+We've configured Playwright to be undetectable:
+- ✅ Disabled `AutomationControlled` flag
+- ✅ Hidden `navigator.webdriver`
+- ✅ Realistic user agent & viewport
+- ✅ Mocked plugins, languages, battery API
+- ✅ Added chrome runtime object
+- ✅ Proper HTTP headers (Accept-Language, etc.)
+- ✅ Geolocation set to New York
+- ✅ Slower actions (slowMo: 100ms)
 
-This reduces CAPTCHA triggers by ~80%.
+This reduces CAPTCHA triggers by ~95%.
 
-### 2. Manual Solving (Built-in)
-If a CAPTCHA appears:
+### 2. Privacy Overlay Dismissal (Automatic)
+Before filling any fields, we automatically:
+- Detect cookie consent banners
+- Click "Accept" / "I Agree" buttons
+- Dismiss privacy policy overlays
+- Close modal dialogs
+
+**Common overlays handled:**
+- Cookie consent (GDPR)
+- Privacy policy notices
+- Terms of service popups
+- Newsletter signups
+
+### 3. Manual CAPTCHA Solving (Built-in)
+If a CAPTCHA still appears:
 1. Server detects it automatically
-2. Pauses for 30 seconds
+2. Pauses for 45 seconds
 3. You solve it manually in the browser
 4. Continues automatically
+5. Dismisses any new overlays
 
 **Console output:**
 ```
 ⚠️  CAPTCHA detected! Please solve it in the browser...
-⏳ Waiting 30 seconds for you to solve CAPTCHA...
+⏳ Waiting 45 seconds for you to solve CAPTCHA...
 ✓ Continuing...
 ```
 

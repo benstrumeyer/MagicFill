@@ -8,6 +8,7 @@ import { SmartMatcher } from './analyzers/SmartMatcher';
 import { ProfileCache } from './ProfileCache';
 import { DropdownFiller } from './fillers/DropdownFiller';
 import { LEARNING_SCRIPT } from './scripts/learning-script';
+import { applyStealthMode, createStealthContext, waitForPageReady, dismissOverlays } from './utils/stealth';
 
 dotenv.config();
 
@@ -116,47 +117,28 @@ app.post('/learn-form', async (req, res) => {
   console.log(`\n🎓 Learning mode request: ${url}`);
   
   try {
-    // Launch visible browser with stealth settings
-    console.log('🚀 Launching browser in learning mode...');
+    // Launch visible browser with maximum stealth
+    console.log('🚀 Launching browser in learning mode with stealth...');
     const learnBrowser = await chromium.launch({ 
       headless: false,
-      slowMo: 50,
+      slowMo: 100, // Slower = more human-like
       args: [
         '--disable-blink-features=AutomationControlled',
         '--disable-dev-shm-usage',
-        '--no-sandbox'
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-web-security',
+        '--disable-features=IsolateOrigins,site-per-process',
+        '--disable-site-isolation-trials',
       ]
     });
     
-    const context = await learnBrowser.newContext({
-      // Make it look like a real browser
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      viewport: { width: 1920, height: 1080 },
-      locale: 'en-US',
-      timezoneId: 'America/New_York'
-    });
+    // Create stealth context
+    const context = await createStealthContext(learnBrowser);
     const page = await context.newPage();
     
-    // Hide automation indicators
-    await page.addInitScript(() => {
-      // Override navigator.webdriver
-      Object.defineProperty(navigator, 'webdriver', {
-        get: () => false,
-      });
-      
-      // Override chrome property
-      (window as any).chrome = {
-        runtime: {},
-      };
-      
-      // Override permissions
-      const originalQuery = window.navigator.permissions.query;
-      window.navigator.permissions.query = (parameters: any) => (
-        parameters.name === 'notifications' ?
-          Promise.resolve({ state: Notification.permission } as PermissionStatus) :
-          originalQuery(parameters)
-      );
-    });
+    // Apply stealth mode
+    await applyStealthMode(page);
     
     // Storage for learned fields
     const learnedFields: any[] = [];
@@ -169,25 +151,35 @@ app.post('/learn-form', async (req, res) => {
     
     // Navigate to URL
     console.log(`🌐 Navigating to ${url}...`);
-    await page.goto(url, { waitUntil: 'networkidle' });
-    await page.waitForTimeout(2000);
+    await page.goto(url, { 
+      waitUntil: 'networkidle',
+      timeout: 60000 
+    });
     
-    // Check for CAPTCHA and wait for user to solve it
+    // Wait for page to be ready and dismiss overlays
+    await waitForPageReady(page);
+    
+    // Check for CAPTCHA
     const hasCaptcha = await page.evaluate(() => {
       const captchaSelectors = [
         'iframe[src*="recaptcha"]',
         'iframe[src*="hcaptcha"]',
+        'iframe[src*="captcha"]',
         '[class*="captcha"]',
-        '[id*="captcha"]'
+        '[id*="captcha"]',
+        '[data-callback*="captcha"]'
       ];
       return captchaSelectors.some(selector => document.querySelector(selector) !== null);
     });
     
     if (hasCaptcha) {
       console.log('⚠️  CAPTCHA detected! Please solve it in the browser...');
-      console.log('⏳ Waiting 30 seconds for you to solve CAPTCHA...');
-      await page.waitForTimeout(30000); // Wait 30 seconds
+      console.log('⏳ Waiting 45 seconds for you to solve CAPTCHA...');
+      await page.waitForTimeout(45000);
       console.log('✓ Continuing...');
+      
+      // Dismiss any new overlays after CAPTCHA
+      await dismissOverlays(page);
     }
     
     // Inject learning script
@@ -256,37 +248,33 @@ app.post('/auto-fill', async (req, res) => {
       }
     }
     
-    // Launch visible browser with stealth settings
-    console.log('🚀 Launching visible browser...');
+    // Launch visible browser with maximum stealth
+    console.log('🚀 Launching visible browser with stealth...');
     const fillBrowser = await chromium.launch({ 
       headless: false,
-      slowMo: 50,
+      slowMo: 100,
       args: [
         '--disable-blink-features=AutomationControlled',
         '--disable-dev-shm-usage',
-        '--no-sandbox'
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-web-security',
+        '--disable-features=IsolateOrigins,site-per-process',
       ]
     });
     
-    const context = await fillBrowser.newContext({
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      viewport: { width: 1920, height: 1080 },
-      locale: 'en-US',
-      timezoneId: 'America/New_York'
-    });
+    const context = await createStealthContext(fillBrowser);
     const page = await context.newPage();
-    
-    // Hide automation indicators
-    await page.addInitScript(() => {
-      Object.defineProperty(navigator, 'webdriver', {
-        get: () => false,
-      });
-      (window as any).chrome = { runtime: {} };
-    });
+    await applyStealthMode(page);
     
     console.log(`🌐 Navigating to ${url}...`);
-    await page.goto(url, { waitUntil: 'networkidle' });
-    await page.waitForTimeout(2000); // Wait for dynamic content
+    await page.goto(url, { 
+      waitUntil: 'networkidle',
+      timeout: 60000 
+    });
+    
+    // Wait for page ready and dismiss overlays
+    await waitForPageReady(page);
     
     let filled = 0;
     let total = 0;
