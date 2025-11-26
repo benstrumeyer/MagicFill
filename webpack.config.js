@@ -6,7 +6,8 @@ module.exports = {
     content: './extension/content/content.ts',
     background: './extension/background/background.ts',
     popup: './extension/popup/popup.ts',
-    manage: './extension/manage/manage.ts'
+    manage: './extension/manage/manage.ts',
+    'review-fields': './extension/popup/review-fields.ts'
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -39,9 +40,11 @@ module.exports = {
         { from: 'extension/manifest.json', to: 'manifest.json' },
         { from: 'extension/popup/popup.html', to: 'popup.html' },
         { from: 'extension/popup/popup.css', to: 'popup.css' },
+        { from: 'extension/popup/review-fields.html', to: 'review-fields.html' },
         { from: 'extension/manage/manage.html', to: 'manage.html' },
         { from: 'extension/manage/manage.css', to: 'manage.css' },
-        { from: 'dev-data.json', to: 'dev-data.json', noErrorOnMissing: true }
+        { from: 'dev-data.json', to: 'dev-data.json', noErrorOnMissing: true },
+        { from: 'field-mappings.json', to: 'field-mappings.json', noErrorOnMissing: true }
       ]
     })
   ],

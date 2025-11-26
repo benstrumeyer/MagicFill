@@ -276,6 +276,18 @@ h1 {
   background: #e5e5e5;
 }
 
+.minus-btn {
+  color: #ef4444;
+  font-size: 24px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.minus-btn:hover {
+  background: #fee;
+  color: #dc2626;
+}
+
 .add-answer-btn {
   width: 100%;
   margin-top: 12px;

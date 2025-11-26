@@ -35,45 +35,6 @@
       </button>
     </div>
 
-    <div id="unrecognizedSection" class="unrecognized-section" style="display: none;">
-      <h3>Unrecognized Fields</h3>
-      <p class="help-text">These fields couldn't be auto-filled. Add answers to fill them next time.</p>
-      <div id="unrecognizedList" class="field-list"></div>
-    </div>
-  </div>
-
-  <!-- Add Answer Modal -->
-  <div id="addAnswerModal" class="modal" style="display: none;">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Add Answer</h2>
-        <button id="closeModal" class="close-btn">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label for="fieldContext">Field Context:</label>
-          <input type="text" id="fieldContext" readonly>
-        </div>
-        <div class="form-group">
-          <label for="answerKey">Answer Key:</label>
-          <input type="text" id="answerKey" placeholder="e.g., preferredWorkLocation">
-        </div>
-        <div class="form-group">
-          <label for="answerValue">Answer Value:</label>
-          <textarea id="answerValue" rows="3" placeholder="Enter your answer..."></textarea>
-        </div>
-        <div class="form-group">
-          <label class="checkbox-label">
-            <input type="checkbox" id="siteSpecific">
-            <span>Site-specific (only for this website)</span>
-          </label>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button id="cancelBtn" class="btn btn-secondary">Cancel</button>
-        <button id="saveAndFillBtn" class="btn btn-primary">Save & Fill Now</button>
-      </div>
-    </div>
   </div>
 
   <script src="popup.js"></script>
