@@ -189,4 +189,30 @@ export class Storage {
     
     await this.setPersonalData(data);
   }
+
+  /**
+   * Get analysis state for current URL
+   */
+  async getAnalysisState(url: string): Promise<any | null> {
+    const states = await this.get<Record<string, any>>('analysisStates');
+    return states?.[url] || null;
+  }
+
+  /**
+   * Set analysis state for URL
+   */
+  async setAnalysisState(url: string, state: any): Promise<void> {
+    const states = await this.get<Record<string, any>>('analysisStates') || {};
+    states[url] = state;
+    await this.set('analysisStates', states);
+  }
+
+  /**
+   * Clear analysis state for URL
+   */
+  async clearAnalysisState(url: string): Promise<void> {
+    const states = await this.get<Record<string, any>>('analysisStates') || {};
+    delete states[url];
+    await this.set('analysisStates', states);
+  }
 }
