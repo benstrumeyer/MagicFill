@@ -6,6 +6,14 @@
 // Personal Data Types
 // ============================================================================
 
+export interface AnalysisState {
+  url: string;
+  status: 'analyzing' | 'completed' | 'failed';
+  startTime: number;
+  profile?: SiteProfile;
+  error?: string;
+}
+
 export interface PersonalData {
   // Basic Info
   firstName: string;
@@ -145,11 +153,14 @@ export interface SiteProfile {
 // ============================================================================
 
 export interface ExtensionMessage {
-  action: 'fillForm' | 'getUnrecognizedFields' | 'fillField' | 'addAnswer' | 'learnForm' | 'analyzeAndFill';
+  action: 'fillForm' | 'getUnrecognizedFields' | 'fillField' | 'addAnswer' | 'learnForm' | 'analyzeAndFill' | 'showToast' | 'saveAllAnswers' | 'startLearning' | 'stopLearning' | 'saveLearnedField';
   payload?: {
     selector?: string;
     value?: string;
     key?: string;
+    label?: string;
     siteSpecific?: boolean;
+    message?: string;
+    type?: 'success' | 'warning' | 'error';
   };
 }

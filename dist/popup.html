@@ -18,17 +18,65 @@
         <div class="status-icon">⏳</div>
         <div class="status-text">Loading...</div>
       </div>
+      
+      <!-- Platform & Profile Status -->
+      <div id="platformStatus" class="platform-status" style="display: none;">
+        <div class="platform-info">
+          <span class="platform-label">Platform:</span>
+          <span id="platformName" class="platform-name">Unknown</span>
+          <span id="scannedBadge" class="scanned-badge" style="display: none;">✓ Scanned</span>
+        </div>
+        <div class="profile-info">
+          <span id="profileStatus" class="profile-status">No profile</span>
+        </div>
+      </div>
+      
+      <!-- Server Status -->
+      <div id="serverStatus" class="server-status" style="display: none;">
+        <span class="server-indicator"></span>
+        <span class="server-text">Playwright Server</span>
+      </div>
     </div>
 
     <div class="actions">
+      <!-- Playwright Learning Mode -->
+      <div class="section-header">Playwright Mode</div>
+      <button id="learnFormBtn" class="btn btn-learn-playwright">
+        <span class="btn-icon">🎓</span>
+        Learn Form
+      </button>
+      
+      <button id="autoFillBtn" class="btn btn-auto-fill" disabled>
+        <span class="btn-icon">🚀</span>
+        Auto-Fill
+      </button>
+      
+      <!-- Browser Learning (No Playwright needed!) -->
+      <div class="section-header">Browser Learning</div>
+      <button id="startBrowserLearningBtn" class="btn btn-browser-learn">
+        <span class="btn-icon">🎓</span>
+        Start Learning
+      </button>
+      
+      <button id="stopBrowserLearningBtn" class="btn btn-stop-learn" style="display: none;">
+        <span class="btn-icon">⏹️</span>
+        Stop & Save
+      </button>
+      
+      <!-- Extension Mode -->
+      <div class="section-header">Extension Mode</div>
       <button id="fillBtn" class="btn btn-primary">
         <span class="btn-icon">✨</span>
         Fill Form
       </button>
-      <button id="learnBtn" class="btn btn-learn">
-        <span class="btn-icon">🧠</span>
-        Learn Form (MCP)
+      
+      <button id="saveAllBtn" class="btn btn-save">
+        <span class="btn-icon">💾</span>
+        Save All Answers
       </button>
+      
+      <!-- Management -->
+      <div class="section-header">Settings</div>
       <button id="manageBtn" class="btn btn-secondary">
         <span class="btn-icon">⚙️</span>
         Manage Answers

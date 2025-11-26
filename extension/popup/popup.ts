@@ -27,6 +27,8 @@ class PopupController {
     document.getElementById('saveAllBtn')?.addEventListener('click', () => this.saveAllAnswers());
     document.getElementById('learnFormBtn')?.addEventListener('click', () => this.learnFormPlaywright());
     document.getElementById('autoFillBtn')?.addEventListener('click', () => this.autoFillPlaywright());
+    document.getElementById('startBrowserLearningBtn')?.addEventListener('click', () => this.startBrowserLearning());
+    document.getElementById('stopBrowserLearningBtn')?.addEventListener('click', () => this.stopBrowserLearning());
     document.getElementById('manageBtn')?.addEventListener('click', () => this.openManageAnswers());
 
     // Load initial status
@@ -350,6 +352,60 @@ class PopupController {
       }
     } catch (error) {
       console.error('Error updating platform status:', error);
+    }
+  }
+
+  /**
+   * Start Browser Learning Mode (No Playwright needed!)
+   */
+  private async startBrowserLearning() {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      
+      if (!tab.id) return;
+      
+      const result = await chrome.tabs.sendMessage(tab.id, {
+        action: 'startLearning'
+      });
+      
+      if (result.success) {
+        this.showStatus('🎓', 'Learning mode active! Fill the form.', 'success');
+        
+        // Toggle buttons
+        const startBtn = document.getElementById('startBrowserLearningBtn');
+        const stopBtn = document.getElementById('stopBrowserLearningBtn');
+        if (startBtn) startBtn.style.display = 'none';
+        if (stopBtn) stopBtn.style.display = 'block';
+      }
+    } catch (error: any) {
+      this.showStatus('❌', 'Error: ' + error.message, 'error');
+    }
+  }
+
+  /**
+   * Stop Browser Learning Mode and save
+   */
+  private async stopBrowserLearning() {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      
+      if (!tab.id) return;
+      
+      const result = await chrome.tabs.sendMessage(tab.id, {
+        action: 'stopLearning'
+      });
+      
+      if (result.success) {
+        this.showStatus('✅', `Learned ${result.fieldsLearned} fields!`, 'success');
+        
+        // Toggle buttons
+        const startBtn = document.getElementById('startBrowserLearningBtn');
+        const stopBtn = document.getElementById('stopBrowserLearningBtn');
+        if (startBtn) startBtn.style.display = 'block';
+        if (stopBtn) stopBtn.style.display = 'none';
+      }
+    } catch (error: any) {
+      this.showStatus('❌', 'Error: ' + error.message, 'error');
     }
   }
 

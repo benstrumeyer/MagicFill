@@ -2,6 +2,7 @@ import { FieldMatcher } from '../core/FieldMatcher';
 import { FormFiller } from '../core/FormFiller';
 import { Storage } from '../core/Storage';
 import { MCPClient } from '../core/MCPClient';
+import { BrowserLearningMode } from '../core/BrowserLearningMode';
 import { ExtensionMessage, FormField } from '../../shared/types';
 
 class ContentScript {
@@ -9,6 +10,7 @@ class ContentScript {
   private formFiller: FormFiller;
   private storage: Storage;
   private mcpClient: MCPClient;
+  private learningMode: BrowserLearningMode;
   private lastFillResult: { filled: number; total: number; unrecognized: FormField[] } | null = null;
 
   constructor() {
@@ -16,6 +18,7 @@ class ContentScript {
     this.formFiller = new FormFiller();
     this.storage = new Storage();
     this.mcpClient = new MCPClient();
+    this.learningMode = new BrowserLearningMode();
     
     this.init();
   }
@@ -25,6 +28,14 @@ class ContentScript {
     chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendResponse) => {
       this.handleMessage(message).then(sendResponse);
       return true; // Keep channel open for async response
+    });
+    
+    // Listen for postMessage from learning mode
+    window.addEventListener('message', async (event) => {
+      if (event.data.type === 'MAGICFILL_SAVE_FIELD') {
+        await this.storage.addAnswer(event.data.label, event.data.value, false);
+        console.log(`💾 Saved to storage: ${event.data.label} = ${event.data.value}`);
+      }
     });
 
     // Expose debug function to window
@@ -54,6 +65,118 @@ class ContentScript {
 
     // Watch for dynamic form changes
     this.observeDynamicForms();
+    
+    // Add auto-save listeners to all fields
+    this.setupAutoSave();
+  }
+
+  /**
+   * Setup auto-save on blur for all form fields
+   */
+  private setupAutoSave() {
+    // Find all fillable fields
+    const fields = this.fieldMatcher.findAllFields();
+    
+    for (const field of fields) {
+      const element = field.element;
+      
+      // Skip file inputs
+      if (field.inputType === 'file') continue;
+      
+      // Add indicator
+      this.addFieldIndicator(element, field);
+      
+      // Add blur listener
+      element.addEventListener('blur', async () => {
+        await this.autoSaveField(element, field);
+      });
+      
+      // Also save on change for selects
+      if (element instanceof HTMLSelectElement) {
+        element.addEventListener('change', async () => {
+          await this.autoSaveField(element, field);
+        });
+      }
+    }
+  }
+
+  /**
+   * Add visual indicator to field
+   */
+  private addFieldIndicator(element: HTMLElement, _field: any) {
+    // Create indicator
+    const indicator = document.createElement('div');
+    indicator.className = 'magicfill-indicator';
+    indicator.innerHTML = '❌';
+    indicator.style.cssText = `
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      z-index: 10000;
+      pointer-events: none;
+    `;
+    
+    // Position parent relatively
+    const parent = element.parentElement;
+    if (parent) {
+      const originalPosition = window.getComputedStyle(parent).position;
+      if (originalPosition === 'static') {
+        parent.style.position = 'relative';
+      }
+      parent.appendChild(indicator);
+      
+      // Store reference
+      (element as any).__magicfillIndicator = indicator;
+    }
+  }
+
+  /**
+   * Auto-save field value on blur
+   */
+  private async autoSaveField(element: HTMLElement, field: any) {
+    let value = '';
+    
+    // Get the value
+    if (element instanceof HTMLInputElement) {
+      if (element.type === 'checkbox') {
+        value = element.checked ? 'true' : 'false';
+      } else {
+        value = element.value;
+      }
+    } else if (element instanceof HTMLTextAreaElement) {
+      value = element.value;
+    } else if (element instanceof HTMLSelectElement) {
+      value = element.options[element.selectedIndex]?.text || element.value;
+    }
+    
+    // Skip if empty
+    if (!value || value.trim() === '') return;
+    
+    // Generate key from context
+    const key = this.generateKey(field.context);
+    
+    // Save to storage
+    await this.storage.addAnswer(key, value, false);
+    
+    // Update indicator
+    const indicator = (element as any).__magicfillIndicator;
+    if (indicator) {
+      indicator.innerHTML = '✓';
+      indicator.style.background = '#10b981';
+      indicator.style.color = 'white';
+    }
+    
+    // Show toast
+    this.showToast(`✓ Saved: ${field.context} = ${value}`, 'success');
   }
 
   private async handleMessage(message: ExtensionMessage): Promise<any> {
@@ -90,7 +213,155 @@ class ContentScript {
       return await this.learnForm();
     }
     
+    if (action === 'startLearning') {
+      this.learningMode.start();
+      return { success: true, message: 'Learning mode started' };
+    }
+    
+    if (action === 'stopLearning') {
+      const fields = this.learningMode.stop();
+      console.log(`📊 Learning mode stopped. Total fields learned: ${fields.length}`);
+      return { success: true, fieldsLearned: fields.length, fields };
+    }
+    
+    if (action === 'saveLearnedField') {
+      // Save field immediately as it's learned
+      if (message.payload?.label && message.payload?.value) {
+        await this.storage.addAnswer(message.payload.label, message.payload.value, false);
+        console.log(`💾 Saved to storage: ${message.payload.label} = ${message.payload.value}`);
+        return { success: true };
+      }
+      return { success: false, error: 'Missing label or value' };
+    }
+    
+    if (action === 'showToast') {
+      if (message.payload?.message) {
+        this.showToast(
+          message.payload.message,
+          message.payload.type || 'success'
+        );
+        return { success: true };
+      }
+      return { success: false, error: 'Missing message' };
+    }
+    
+    if (action === 'saveAllAnswers') {
+      return await this.saveAllAnswers();
+    }
+    
     return { success: false, error: 'Unknown action' };
+  }
+
+  /**
+   * Save all filled fields as answers
+   */
+  private async saveAllAnswers() {
+    try {
+      console.log('🔍 Scanning page for filled fields...');
+      
+      // Find all fields on the page
+      const allFields = this.fieldMatcher.findAllFields();
+      console.log(`Found ${allFields.length} total fields`);
+      
+      // Filter to only filled fields
+      const filledFields = allFields.filter(field => {
+        const element = field.element;
+        
+        if (element instanceof HTMLInputElement) {
+          if (element.type === 'checkbox' || element.type === 'radio') {
+            return element.checked;
+          }
+          return element.value && element.value.trim() !== '';
+        } else if (element instanceof HTMLTextAreaElement) {
+          return element.value && element.value.trim() !== '';
+        } else if (element instanceof HTMLSelectElement) {
+          return element.selectedIndex > 0; // Ignore default/placeholder options
+        }
+        
+        return false;
+      });
+      
+      console.log(`Found ${filledFields.length} filled fields`);
+      
+      if (filledFields.length === 0) {
+        return {
+          success: false,
+          error: 'No filled fields found on this page'
+        };
+      }
+      
+      // Extract answers from filled fields
+      const answers: Array<{ key: string; value: string; context: string }> = [];
+      
+      for (const field of filledFields) {
+        const element = field.element;
+        let value = '';
+        
+        // Get the value
+        if (element instanceof HTMLInputElement) {
+          if (element.type === 'checkbox') {
+            value = element.checked ? 'true' : 'false';
+          } else if (element.type === 'radio') {
+            value = element.value;
+          } else {
+            value = element.value;
+          }
+        } else if (element instanceof HTMLTextAreaElement) {
+          value = element.value;
+        } else if (element instanceof HTMLSelectElement) {
+          value = element.options[element.selectedIndex]?.text || element.value;
+        }
+        
+        // Generate a key from the context
+        const key = this.generateKey(field.context);
+        
+        answers.push({
+          key,
+          value,
+          context: field.context
+        });
+      }
+      
+      console.log('Extracted answers:', answers);
+      
+      // Save all answers to storage
+      let savedCount = 0;
+      let updatedCount = 0;
+      
+      const personalData = await this.storage.getPersonalData();
+      const existingAnswers = personalData.customAnswers || {};
+      
+      for (const answer of answers) {
+        const existed = existingAnswers.hasOwnProperty(answer.key);
+        
+        await this.storage.addAnswer(answer.key, answer.value, false);
+        
+        if (existed) {
+          updatedCount++;
+        } else {
+          savedCount++;
+        }
+      }
+      
+      // Show success message
+      const message = `✅ Saved ${savedCount} new answers, updated ${updatedCount} existing answers`;
+      this.showToast(message, 'success');
+      
+      return {
+        success: true,
+        saved: savedCount,
+        updated: updatedCount,
+        total: answers.length,
+        answers
+      };
+      
+    } catch (error: any) {
+      console.error('Error saving answers:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to save answers'
+      };
+    }
   }
 
   /**
@@ -120,7 +391,7 @@ class ContentScript {
       // Get current fill result to find unrecognized fields
       const currentFields = this.fieldMatcher.findAllFields();
       const personalData = await this.storage.getPersonalData();
-      const fillResult = this.formFiller.fillAllFields(currentFields, personalData, this.fieldMatcher);
+      const fillResult = await this.formFiller.fillAllFieldsAsync(currentFields, personalData, this.fieldMatcher);
       
       // Extract unrecognized fields with their context
       const learnedFields = fillResult.unrecognized.map(field => ({
@@ -192,241 +463,17 @@ class ContentScript {
     console.log('  - Custom answer keys:', Object.keys(personalData.customAnswers || {}));
     console.log('  - Field mappings:', Object.keys(personalData.fieldMappings || {}).length);
     
-    const result = this.formFiller.fillAllFields(fields, personalData, this.fieldMatcher);
+    const result = await this.formFiller.fillAllFieldsAsync(fields, personalData, this.fieldMatcher);
     this.lastFillResult = result;
     
     console.log('✅ Fill complete:', { filled: result.filled, total: result.total, unrecognized: result.unrecognized.length });
     
-    // Add save buttons to unrecognized fields
-    for (const field of result.unrecognized) {
-      this.addSaveButton(field);
-    }
+    // No longer adding save buttons - using auto-save on blur instead
     
     return result;
   }
 
-  /**
-   * Add a "Save Answer" button above an unrecognized field
-   */
-  private addSaveButton(field: FormField): void {
-    // Check if button already exists
-    const existingButton = document.querySelector(`[data-magicfill-save="${field.selector}"]`);
-    if (existingButton) return;
-
-    const button = document.createElement('button');
-    button.className = 'magicfill-save-btn';
-    button.setAttribute('data-magicfill-save', field.selector);
-    button.innerHTML = '💾 Save Answer';
-    button.style.cssText = `
-      position: absolute;
-      z-index: 999999;
-      padding: 6px 12px;
-      background: #6366f1;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      transition: all 0.2s;
-    `;
-
-    button.addEventListener('mouseenter', () => {
-      button.style.background = '#5558e3';
-      button.style.transform = 'translateY(-1px)';
-      button.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.4)';
-    });
-
-    button.addEventListener('mouseleave', () => {
-      button.style.background = '#6366f1';
-      button.style.transform = 'translateY(0)';
-      button.style.boxShadow = '0 2px 8px rgba(99, 102, 241, 0.3)';
-    });
-
-    button.addEventListener('click', async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      await this.saveFieldAnswer(field, button);
-    });
-
-    // Position button above the field
-    const rect = field.element.getBoundingClientRect();
-    button.style.top = `${window.scrollY + rect.top - 35}px`;
-    button.style.left = `${window.scrollX + rect.left}px`;
-
-    document.body.appendChild(button);
-
-    // Reposition on scroll/resize
-    const reposition = () => {
-      const newRect = field.element.getBoundingClientRect();
-      button.style.top = `${window.scrollY + newRect.top - 35}px`;
-      button.style.left = `${window.scrollX + newRect.left}px`;
-    };
-
-    window.addEventListener('scroll', reposition);
-    window.addEventListener('resize', reposition);
-  }
-
-  /**
-   * Save a field's answer to custom answers
-   */
-  private async saveFieldAnswer(field: FormField, button: HTMLElement): Promise<void> {
-    console.log('=== SAVE FIELD ANSWER ===');
-    console.log('Field info:', { selector: field.selector, fieldType: field.fieldType, inputType: field.inputType });
-    
-    // Try multiple ways to get the element
-    let freshElement = document.querySelector(field.selector) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
-    
-    // If selector doesn't work, try using the original element
-    if (!freshElement) {
-      console.log('Selector failed, using original element');
-      freshElement = field.element;
-    }
-    
-    if (!freshElement) {
-      console.log('ERROR: Element not found');
-      this.showToast('⚠️ Field not found', 'error');
-      return;
-    }
-
-    console.log('Found element:', { tagName: freshElement.tagName, value: freshElement.value });
-
-    let value = freshElement.value;
-
-    // Check if this is a custom dropdown (input with hidden select)
-    if (freshElement instanceof HTMLInputElement && !value) {
-      console.log('Input has no value, looking for hidden select...');
-      
-      // Try multiple strategies to find the select
-      
-      // Strategy 1: Look in immediate parent
-      const parent = freshElement.closest('div, fieldset, form');
-      console.log('Parent element:', parent?.tagName);
-      
-      let hiddenSelect = parent?.querySelector('select') as HTMLSelectElement;
-      console.log('Hidden select in parent:', !!hiddenSelect);
-      
-      // Strategy 2: Look for select with same name
-      if (!hiddenSelect && freshElement.name) {
-        hiddenSelect = document.querySelector(`select[name="${freshElement.name}"]`) as HTMLSelectElement;
-        console.log('Hidden select by name:', !!hiddenSelect);
-      }
-      
-      // Strategy 3: Look for select with similar ID
-      if (!hiddenSelect && freshElement.id) {
-        const selectId = freshElement.id.replace('input', 'select').replace('_input', '');
-        hiddenSelect = document.querySelector(`select[id*="${selectId}"]`) as HTMLSelectElement;
-        console.log('Hidden select by ID pattern:', !!hiddenSelect);
-      }
-      
-      // Strategy 4: Look for ANY select in the same container
-      if (!hiddenSelect) {
-        const container = freshElement.closest('[class*="field"], [class*="form"], [class*="input"]');
-        if (container) {
-          hiddenSelect = container.querySelector('select') as HTMLSelectElement;
-          console.log('Hidden select in container:', !!hiddenSelect);
-        }
-      }
-      
-      // Strategy 5: Check if input has data attributes pointing to value
-      if (!hiddenSelect) {
-        const dataValue = freshElement.getAttribute('data-value') || 
-                         freshElement.getAttribute('data-selected') ||
-                         freshElement.getAttribute('aria-label');
-        if (dataValue) {
-          value = dataValue;
-          console.log('Using data attribute value:', value);
-        }
-      }
-      
-      if (hiddenSelect) {
-        console.log('Hidden select details:', {
-          selectedIndex: hiddenSelect.selectedIndex,
-          optionsCount: hiddenSelect.options.length,
-          allOptions: Array.from(hiddenSelect.options).map((o, i) => ({ index: i, text: o.text, value: o.value }))
-        });
-        
-        if (hiddenSelect.selectedIndex > 0) {
-          const selectedOption = hiddenSelect.options[hiddenSelect.selectedIndex];
-          value = selectedOption.text || selectedOption.value;
-          console.log('Using hidden select value:', value);
-        } else {
-          console.log('Hidden select index is 0 (placeholder)');
-        }
-      }
-    }
-
-    // For select elements, prefer the selected option text
-    if (freshElement instanceof HTMLSelectElement) {
-      console.log('Element is a SELECT');
-      const select = freshElement;
-      const selectedOption = select.options[select.selectedIndex];
-      
-      console.log('Select details:', {
-        selectedIndex: select.selectedIndex,
-        selectedText: selectedOption?.text,
-        selectedValue: selectedOption?.value
-      });
-      
-      if (selectedOption && selectedOption.text) {
-        // Use option text (more human-readable)
-        value = selectedOption.text;
-      }
-    }
-
-    console.log('Final value:', value);
-
-    // If still no value, prompt user to enter it
-    if (!value || !value.trim()) {
-      console.log('No value found, prompting user...');
-      
-      // Prompt user to enter the value
-      const userValue = prompt(`Enter the value for "${field.context}":`);
-      
-      if (!userValue || !userValue.trim()) {
-        this.showToast('⚠️ No value entered', 'warning');
-        return;
-      }
-      
-      value = userValue.trim();
-      console.log('User entered value:', value);
-    }
-
-    // Check if value is a common placeholder
-    const placeholders = ['select', 'select...', 'please select', 'choose', 'choose...', '--', 'select one'];
-    const lowerValue = value.toLowerCase().trim();
-    const isPlaceholder = placeholders.includes(lowerValue);
-
-    console.log('Validation:', { value, isPlaceholder });
-
-    if (isPlaceholder) {
-      this.showToast('⚠️ Please select a valid option', 'warning');
-      return;
-    }
-
-    // Generate key from context
-    const key = this.generateKey(field.context);
-
-    // Save to storage
-    await this.storage.addAnswer(key, value, false);
-
-    // Update button to show success
-    button.innerHTML = '✅ Saved!';
-    button.style.background = '#4CAF50';
-
-    // Highlight field green (use fresh element)
-    this.formFiller.highlightFieldGreen(freshElement);
-
-    // Show toast
-    this.showToast(`✅ Saved "${key}"`, 'success');
-
-    // Remove button after 2 seconds
-    setTimeout(() => {
-      button.remove();
-    }, 2000);
-  }
+  // REMOVED: Old save button methods - now using auto-save on blur with indicators
 
   private showToast(message: string, type: 'success' | 'warning' | 'error') {
     // Get existing toasts

@@ -1,2 +1,623 @@
-(()=>{"use strict";class e{async get(e){return new Promise(t=>{chrome.storage.local.get([e],s=>{t(s[e]||null)})})}async set(e,t){return new Promise(s=>{chrome.storage.local.set({[e]:t},()=>{s()})})}async getPersonalData(){const e=await this.get("personalData");if(!e||0===Object.keys(e).length||!e.firstName){const e=await this.loadDevData();if(e)return console.log("Storage: Loaded dev-data.json for testing"),await this.setPersonalData(e),e}const t=e||this.getDefaultPersonalData();return t.fieldMappings||(t.fieldMappings=await this.loadFieldMappings()),t}async loadFieldMappings(){try{const e=await fetch(chrome.runtime.getURL("field-mappings.json"));if(e.ok){const t=await e.json();return console.log("Storage: Loaded field-mappings.json"),t}}catch(e){console.log("Storage: No field-mappings.json found")}return{}}async loadDevData(){try{const e=await fetch(chrome.runtime.getURL("dev-data.json"));if(e.ok)return await e.json()}catch(e){console.log("Storage: No dev-data.json found (this is normal for production)")}return null}async setPersonalData(e){await this.set("personalData",e)}async addAnswer(e,t,s=!1){const a=await this.getPersonalData();if(a.customAnswers||(a.customAnswers={}),s){const s=window.location.hostname;a.siteSpecificAnswers||(a.siteSpecificAnswers={}),a.siteSpecificAnswers[s]||(a.siteSpecificAnswers[s]={}),a.siteSpecificAnswers[s][e]=t}else a.customAnswers[e]=t;await this.setPersonalData(a)}getDefaultPersonalData(){return{firstName:"",lastName:"",email:"",phone:"",address:"",address2:"",city:"",state:"",zipCode:"",country:"United States",currentCompany:"",currentTitle:"",yearsExperience:0,linkedin:"",github:"",portfolio:"",university:"",degree:"",major:"",graduationYear:0,workAuthorization:"",requiresSponsorship:!1,salaryExpectation:"",startDate:"",noticePeriod:"",referral:"",howDidYouHear:"",coverLetter:"",additionalInfo:"",customAnswers:{},siteSpecificAnswers:{}}}async exportData(){const e=await this.getPersonalData();return JSON.stringify(e,null,2)}async importData(e){try{const t=JSON.parse(e);await this.setPersonalData(t)}catch(e){throw new Error("Invalid JSON format")}}async deleteAnswer(e,t=!1,s){const a=await this.getPersonalData();t&&s&&a.siteSpecificAnswers?.[s]?delete a.siteSpecificAnswers[s][e]:a.customAnswers&&delete a.customAnswers[e],await this.setPersonalData(a)}}class t{constructor(){this.personalData=null,this.searchQuery="",console.log("ManageController: Initializing..."),this.storage=new e,this.init().catch(e=>{console.error("ManageController: Initialization failed:",e),alert("Failed to initialize. Please check the console for errors.")})}async init(){try{console.log("ManageController: Loading personal data..."),console.log("ManageController: Personal data loaded:",this.personalData),this.personalData=await this.storage.getPersonalData(),this.setupEventListeners(),console.log("ManageController: Event listeners setup"),this.loadPersonalDataTab(),this.updateStats(),console.log("ManageController: Initialization complete")}catch(e){throw console.error("ManageController: Error during init:",e),e}}setupEventListeners(){document.querySelectorAll(".tab-btn").forEach(e=>{e.addEventListener("click",e=>{const t=e.target.dataset.tab;t&&this.switchTab(t)})}),document.getElementById("searchInput")?.addEventListener("input",e=>{this.searchQuery=e.target.value.toLowerCase(),this.filterAnswers()}),document.getElementById("savePersonalBtn")?.addEventListener("click",()=>this.savePersonalData()),document.getElementById("exportBtn")?.addEventListener("click",()=>this.exportData()),document.getElementById("importBtn")?.addEventListener("click",()=>this.showImportModal()),document.getElementById("confirmImportBtn")?.addEventListener("click",()=>this.importData()),document.getElementById("addCustomBtn")?.addEventListener("click",()=>this.addCustomAnswer())}switchTab(e){document.querySelectorAll(".tab-btn").forEach(t=>{t.classList.toggle("active",t.getAttribute("data-tab")===e)}),document.querySelectorAll(".tab-pane").forEach(e=>{e.classList.remove("active")});const t={personal:"personalTab",custom:"customTab","site-specific":"siteSpecificTab"}[e];t&&(document.getElementById(t)?.classList.add("active"),"custom"===e&&this.loadCustomAnswers(),"site-specific"===e&&this.loadSiteSpecificAnswers())}loadPersonalDataTab(){this.personalData&&document.querySelectorAll(".personal-field").forEach(e=>{const t=e,s=t.dataset.field;if(s&&this.personalData){const e=this.personalData[s];t instanceof HTMLSelectElement?t.value=String(e):t.value=null!=e?String(e):""}})}async savePersonalData(){this.personalData&&(document.querySelectorAll(".personal-field").forEach(e=>{const t=e,s=t.dataset.field;if(s&&this.personalData){let e=t.value;"yearsExperience"===s||"graduationYear"===s?e=e?parseInt(e):void 0:"requiresSponsorship"===s&&(e="true"===e),this.personalData[s]=e}}),await this.storage.setPersonalData(this.personalData),this.showSuccessMessage("Personal data saved successfully!"))}loadCustomAnswers(){if(!this.personalData?.customAnswers)return;const e=document.getElementById("customAnswersList");if(!e)return;e.innerHTML="";const t=Object.entries(this.personalData.customAnswers);0!==t.length?t.forEach(([t,s])=>{const a=document.createElement("div");a.className="answer-item",a.innerHTML=`\n        <div class="answer-info">\n          <div class="answer-key">${t}</div>\n          <div class="answer-value">${this.truncate(String(s),100)}</div>\n        </div>\n        <div class="answer-actions">\n          <button class="icon-btn edit-btn" data-key="${t}" title="Edit">✏️</button>\n          <button class="icon-btn delete-btn minus-btn" data-key="${t}" title="Remove">−</button>\n        </div>\n      `,a.querySelector(".edit-btn")?.addEventListener("click",()=>this.editCustomAnswer(t)),a.querySelector(".delete-btn")?.addEventListener("click",()=>this.deleteCustomAnswer(t)),e.appendChild(a)}):e.innerHTML='\n        <div class="empty-state">\n          <div class="empty-state-icon">📝</div>\n          <div class="empty-state-text">No custom answers yet</div>\n        </div>\n      '}loadSiteSpecificAnswers(){if(!this.personalData?.siteSpecificAnswers)return;const e=document.getElementById("sitesList");if(!e)return;e.innerHTML="";const t=Object.entries(this.personalData.siteSpecificAnswers);0!==t.length?t.forEach(([t,s])=>{const a=document.createElement("div");a.className="site-section";const n=document.createElement("div");n.className="site-header",n.textContent=t,a.appendChild(n);const o=document.createElement("div");o.className="answers-list",Object.entries(s).forEach(([e,s])=>{const a=document.createElement("div");a.className="answer-item",a.innerHTML=`\n          <div class="answer-info">\n            <div class="answer-key">${e}</div>\n            <div class="answer-value">${this.truncate(String(s),100)}</div>\n          </div>\n          <div class="answer-actions">\n            <button class="icon-btn delete-btn minus-btn" data-hostname="${t}" data-key="${e}" title="Remove">−</button>\n          </div>\n        `,a.querySelector(".delete-btn")?.addEventListener("click",()=>{this.deleteSiteSpecificAnswer(t,e)}),o.appendChild(a)}),a.appendChild(o),e.appendChild(a)}):e.innerHTML='\n        <div class="empty-state">\n          <div class="empty-state-icon">🌐</div>\n          <div class="empty-state-text">No site-specific answers yet</div>\n        </div>\n      '}async addCustomAnswer(){const e=prompt("Enter answer key (e.g., preferredWorkLocation):");if(!e)return;const t=prompt("Enter answer value:");t&&(await this.storage.addAnswer(e,t,!1),this.personalData=await this.storage.getPersonalData(),this.loadCustomAnswers(),this.updateStats(),this.showSuccessMessage("Custom answer added!"))}async editCustomAnswer(e){const t=this.personalData?.customAnswers?.[e],s=prompt("Edit answer value:",String(t));null!==s&&(await this.storage.addAnswer(e,s,!1),this.personalData=await this.storage.getPersonalData(),this.loadCustomAnswers(),this.showSuccessMessage("Answer updated!"))}async deleteCustomAnswer(e){confirm(`Delete answer "${e}"?`)&&(await this.storage.deleteAnswer(e,!1),this.personalData=await this.storage.getPersonalData(),this.loadCustomAnswers(),this.updateStats(),this.showSuccessMessage("Answer deleted!"))}async deleteSiteSpecificAnswer(e,t){confirm(`Delete answer "${t}" for ${e}?`)&&(await this.storage.deleteAnswer(t,!0,e),this.personalData=await this.storage.getPersonalData(),this.loadSiteSpecificAnswers(),this.updateStats(),this.showSuccessMessage("Answer deleted!"))}filterAnswers(){document.querySelectorAll(".answer-item").forEach(e=>{const t=(e.textContent?.toLowerCase()||"").includes(this.searchQuery);e.style.display=t?"flex":"none"})}async exportData(){const e=await this.storage.exportData(),t=new Blob([e],{type:"application/json"}),s=URL.createObjectURL(t),a=document.createElement("a");a.href=s,a.download=`magicfill-data-${Date.now()}.json`,a.click(),URL.revokeObjectURL(s),this.showSuccessMessage("Data exported!")}showImportModal(){const e=document.getElementById("importModal");e&&(e.style.display="flex")}async importData(){const e=document.getElementById("importJson");if(e)try{await this.storage.importData(e.value),this.personalData=await this.storage.getPersonalData(),this.loadPersonalDataTab(),this.updateStats(),this.closeImportModal(),this.showSuccessMessage("Data imported successfully!")}catch(e){alert("Invalid JSON format. Please check your data and try again.")}}closeImportModal(){const e=document.getElementById("importModal");e&&(e.style.display="none")}updateStats(){if(!this.personalData)return;const e=Object.keys(this.personalData.customAnswers||{}).length,t=Object.keys(this.personalData.siteSpecificAnswers||{}).length,s=document.getElementById("totalAnswers"),a=document.getElementById("sitesConfigured");s&&(s.textContent=String(e)),a&&(a.textContent=String(t))}showSuccessMessage(e){const t=document.createElement("div");t.className="success-message",t.textContent=e,document.body.appendChild(t),setTimeout(()=>{t.remove()},3e3)}truncate(e,t){return e.length<=t?e:e.substring(0,t)+"..."}}window.closeImportModal=()=>{const e=document.getElementById("importModal");e&&(e.style.display="none")},console.log("manage.ts: Script loaded, creating ManageController...");try{new t}catch(e){console.error("manage.ts: Failed to create ManageController:",e),document.body.innerHTML=`\n    <div style="padding: 20px; font-family: Arial;">\n      <h1>Error Loading MagicFill</h1>\n      <p>Failed to initialize the extension. Please check the browser console for details.</p>\n      <pre style="background: #f5f5f5; padding: 10px; border-radius: 4px;">${e}</pre>\n    </div>\n  `}})();
+/******/ (() => { // webpackBootstrap
+/******/ 	"use strict";
+/******/ 	var __webpack_modules__ = ({
+
+/***/ "./extension/core/Storage.ts":
+/*!***********************************!*\
+  !*** ./extension/core/Storage.ts ***!
+  \***********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Storage: () => (/* binding */ Storage)
+/* harmony export */ });
+class Storage {
+    /**
+     * Get a value from chrome.storage.local
+     */
+    async get(key) {
+        return new Promise((resolve) => {
+            chrome.storage.local.get([key], (result) => {
+                resolve(result[key] || null);
+            });
+        });
+    }
+    /**
+     * Set a value in chrome.storage.local
+     */
+    async set(key, value) {
+        return new Promise((resolve) => {
+            chrome.storage.local.set({ [key]: value }, () => {
+                resolve();
+            });
+        });
+    }
+    /**
+     * Get personal data
+     */
+    async getPersonalData() {
+        const data = await this.get('personalData');
+        // If no data exists, try to load dev data
+        if (!data || Object.keys(data).length === 0 || !data.firstName) {
+            const devData = await this.loadDevData();
+            if (devData) {
+                console.log('Storage: Loaded dev-data.json for testing');
+                await this.setPersonalData(devData);
+                return devData;
+            }
+        }
+        const result = data || this.getDefaultPersonalData();
+        // Load field mappings if not present
+        if (!result.fieldMappings) {
+            result.fieldMappings = await this.loadFieldMappings();
+        }
+        return result;
+    }
+    /**
+     * Load field mappings from field-mappings.json
+     */
+    async loadFieldMappings() {
+        try {
+            const response = await fetch(chrome.runtime.getURL('field-mappings.json'));
+            if (response.ok) {
+                const mappings = await response.json();
+                console.log('Storage: Loaded field-mappings.json');
+                return mappings;
+            }
+        }
+        catch (error) {
+            console.log('Storage: No field-mappings.json found');
+        }
+        return {};
+    }
+    /**
+     * Load development data from dev-data.json (for testing)
+     */
+    async loadDevData() {
+        try {
+            const response = await fetch(chrome.runtime.getURL('dev-data.json'));
+            if (response.ok) {
+                const data = await response.json();
+                return data;
+            }
+        }
+        catch (error) {
+            // dev-data.json doesn't exist, that's fine
+            console.log('Storage: No dev-data.json found (this is normal for production)');
+        }
+        return null;
+    }
+    /**
+     * Set personal data
+     */
+    async setPersonalData(data) {
+        await this.set('personalData', data);
+    }
+    /**
+     * Add a custom answer dynamically
+     */
+    async addAnswer(key, value, siteSpecific = false) {
+        const data = await this.getPersonalData();
+        if (!data.customAnswers) {
+            data.customAnswers = {};
+        }
+        if (siteSpecific) {
+            const hostname = window.location.hostname;
+            if (!data.siteSpecificAnswers) {
+                data.siteSpecificAnswers = {};
+            }
+            if (!data.siteSpecificAnswers[hostname]) {
+                data.siteSpecificAnswers[hostname] = {};
+            }
+            data.siteSpecificAnswers[hostname][key] = value;
+        }
+        else {
+            data.customAnswers[key] = value;
+        }
+        await this.setPersonalData(data);
+    }
+    /**
+     * Get default personal data structure
+     */
+    getDefaultPersonalData() {
+        return {
+            firstName: '',
+            lastName: '',
+            email: '',
+            phone: '',
+            address: '',
+            address2: '',
+            city: '',
+            state: '',
+            zipCode: '',
+            country: 'United States',
+            currentCompany: '',
+            currentTitle: '',
+            yearsExperience: 0,
+            linkedin: '',
+            github: '',
+            portfolio: '',
+            university: '',
+            degree: '',
+            major: '',
+            graduationYear: 0,
+            workAuthorization: '',
+            requiresSponsorship: false,
+            salaryExpectation: '',
+            startDate: '',
+            noticePeriod: '',
+            referral: '',
+            howDidYouHear: '',
+            coverLetter: '',
+            additionalInfo: '',
+            customAnswers: {},
+            siteSpecificAnswers: {},
+        };
+    }
+    /**
+     * Export personal data as JSON
+     */
+    async exportData() {
+        const data = await this.getPersonalData();
+        return JSON.stringify(data, null, 2);
+    }
+    /**
+     * Import personal data from JSON
+     */
+    async importData(json) {
+        try {
+            const data = JSON.parse(json);
+            await this.setPersonalData(data);
+        }
+        catch (error) {
+            throw new Error('Invalid JSON format');
+        }
+    }
+    /**
+     * Delete a custom answer
+     */
+    async deleteAnswer(key, siteSpecific = false, hostname) {
+        const data = await this.getPersonalData();
+        if (siteSpecific && hostname && data.siteSpecificAnswers?.[hostname]) {
+            delete data.siteSpecificAnswers[hostname][key];
+        }
+        else if (data.customAnswers) {
+            delete data.customAnswers[key];
+        }
+        await this.setPersonalData(data);
+    }
+    /**
+     * Get analysis state for current URL
+     */
+    async getAnalysisState(url) {
+        const states = await this.get('analysisStates');
+        return states?.[url] || null;
+    }
+    /**
+     * Set analysis state for URL
+     */
+    async setAnalysisState(url, state) {
+        const states = await this.get('analysisStates') || {};
+        states[url] = state;
+        await this.set('analysisStates', states);
+    }
+    /**
+     * Clear analysis state for URL
+     */
+    async clearAnalysisState(url) {
+        const states = await this.get('analysisStates') || {};
+        delete states[url];
+        await this.set('analysisStates', states);
+    }
+}
+
+
+/***/ })
+
+/******/ 	});
+/************************************************************************/
+/******/ 	// The module cache
+/******/ 	var __webpack_module_cache__ = {};
+/******/ 	
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+/******/ 		// Check if module is in cache
+/******/ 		var cachedModule = __webpack_module_cache__[moduleId];
+/******/ 		if (cachedModule !== undefined) {
+/******/ 			return cachedModule.exports;
+/******/ 		}
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = __webpack_module_cache__[moduleId] = {
+/******/ 			// no module.id needed
+/******/ 			// no module.loaded needed
+/******/ 			exports: {}
+/******/ 		};
+/******/ 	
+/******/ 		// Execute the module function
+/******/ 		__webpack_modules__[moduleId](module, module.exports, __webpack_require__);
+/******/ 	
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/ 	
+/************************************************************************/
+/******/ 	/* webpack/runtime/define property getters */
+/******/ 	(() => {
+/******/ 		// define getter functions for harmony exports
+/******/ 		__webpack_require__.d = (exports, definition) => {
+/******/ 			for(var key in definition) {
+/******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
+/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 				}
+/******/ 			}
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
+/******/ 	(() => {
+/******/ 		__webpack_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/make namespace object */
+/******/ 	(() => {
+/******/ 		// define __esModule on exports
+/******/ 		__webpack_require__.r = (exports) => {
+/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 			}
+/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/************************************************************************/
+var __webpack_exports__ = {};
+// This entry needs to be wrapped in an IIFE because it needs to be isolated against other modules in the chunk.
+(() => {
+/*!************************************!*\
+  !*** ./extension/manage/manage.ts ***!
+  \************************************/
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _core_Storage__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../core/Storage */ "./extension/core/Storage.ts");
+
+class ManageController {
+    constructor() {
+        this.personalData = null;
+        this.searchQuery = '';
+        console.log('ManageController: Initializing...');
+        this.storage = new _core_Storage__WEBPACK_IMPORTED_MODULE_0__.Storage();
+        this.init().catch(error => {
+            console.error('ManageController: Initialization failed:', error);
+            alert('Failed to initialize. Please check the console for errors.');
+        });
+    }
+    async init() {
+        try {
+            console.log('ManageController: Loading personal data...');
+            // Load personal data
+            console.log('ManageController: Personal data loaded:', this.personalData);
+            this.personalData = await this.storage.getPersonalData();
+            // Setup event listeners
+            this.setupEventListeners();
+            console.log('ManageController: Event listeners setup');
+            // Load initial data
+            this.loadPersonalDataTab();
+            this.updateStats();
+            console.log('ManageController: Initialization complete');
+        }
+        catch (error) {
+            console.error('ManageController: Error during init:', error);
+            throw error;
+        }
+    }
+    setupEventListeners() {
+        // Tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const target = e.target;
+                const tab = target.dataset.tab;
+                if (tab)
+                    this.switchTab(tab);
+            });
+        });
+        // Search
+        document.getElementById('searchInput')?.addEventListener('input', (e) => {
+            this.searchQuery = e.target.value.toLowerCase();
+            this.filterAnswers();
+        });
+        // Save personal data
+        document.getElementById('savePersonalBtn')?.addEventListener('click', () => this.savePersonalData());
+        // Export/Import
+        document.getElementById('exportBtn')?.addEventListener('click', () => this.exportData());
+        document.getElementById('importBtn')?.addEventListener('click', () => this.showImportModal());
+        document.getElementById('confirmImportBtn')?.addEventListener('click', () => this.importData());
+        // Add custom answer
+        document.getElementById('addCustomBtn')?.addEventListener('click', () => this.addCustomAnswer());
+    }
+    switchTab(tab) {
+        // Update tab buttons
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-tab') === tab);
+        });
+        // Update tab panes
+        document.querySelectorAll('.tab-pane').forEach(pane => {
+            pane.classList.remove('active');
+        });
+        const paneMap = {
+            'personal': 'personalTab',
+            'custom': 'customTab',
+            'site-specific': 'siteSpecificTab',
+        };
+        const paneId = paneMap[tab];
+        if (paneId) {
+            document.getElementById(paneId)?.classList.add('active');
+            // Load tab-specific data
+            if (tab === 'custom')
+                this.loadCustomAnswers();
+            if (tab === 'site-specific')
+                this.loadSiteSpecificAnswers();
+        }
+    }
+    loadPersonalDataTab() {
+        if (!this.personalData)
+            return;
+        document.querySelectorAll('.personal-field').forEach(field => {
+            const input = field;
+            const fieldName = input.dataset.field;
+            if (fieldName && this.personalData) {
+                const value = this.personalData[fieldName];
+                if (input instanceof HTMLSelectElement) {
+                    input.value = String(value);
+                }
+                else {
+                    input.value = value !== null && value !== undefined ? String(value) : '';
+                }
+            }
+        });
+    }
+    async savePersonalData() {
+        if (!this.personalData)
+            return;
+        document.querySelectorAll('.personal-field').forEach(field => {
+            const input = field;
+            const fieldName = input.dataset.field;
+            if (fieldName && this.personalData) {
+                let value = input.value;
+                // Convert types
+                if (fieldName === 'yearsExperience' || fieldName === 'graduationYear') {
+                    value = value ? parseInt(value) : undefined;
+                }
+                else if (fieldName === 'requiresSponsorship') {
+                    value = value === 'true';
+                }
+                this.personalData[fieldName] = value;
+            }
+        });
+        await this.storage.setPersonalData(this.personalData);
+        this.showSuccessMessage('Personal data saved successfully!');
+    }
+    loadCustomAnswers() {
+        if (!this.personalData?.customAnswers)
+            return;
+        const list = document.getElementById('customAnswersList');
+        if (!list)
+            return;
+        list.innerHTML = '';
+        const answers = Object.entries(this.personalData.customAnswers);
+        if (answers.length === 0) {
+            list.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">📝</div>
+          <div class="empty-state-text">No custom answers yet</div>
+        </div>
+      `;
+            return;
+        }
+        answers.forEach(([key, value]) => {
+            const item = document.createElement('div');
+            item.className = 'answer-item';
+            item.innerHTML = `
+        <div class="answer-info">
+          <div class="answer-key">${key}</div>
+          <div class="answer-value">${this.truncate(String(value), 100)}</div>
+        </div>
+        <div class="answer-actions">
+          <button class="icon-btn edit-btn" data-key="${key}" title="Edit">✏️</button>
+          <button class="icon-btn delete-btn minus-btn" data-key="${key}" title="Remove">−</button>
+        </div>
+      `;
+            item.querySelector('.edit-btn')?.addEventListener('click', () => this.editCustomAnswer(key));
+            item.querySelector('.delete-btn')?.addEventListener('click', () => this.deleteCustomAnswer(key));
+            list.appendChild(item);
+        });
+    }
+    loadSiteSpecificAnswers() {
+        if (!this.personalData?.siteSpecificAnswers)
+            return;
+        const container = document.getElementById('sitesList');
+        if (!container)
+            return;
+        container.innerHTML = '';
+        const sites = Object.entries(this.personalData.siteSpecificAnswers);
+        if (sites.length === 0) {
+            container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">🌐</div>
+          <div class="empty-state-text">No site-specific answers yet</div>
+        </div>
+      `;
+            return;
+        }
+        sites.forEach(([hostname, answers]) => {
+            const section = document.createElement('div');
+            section.className = 'site-section';
+            const header = document.createElement('div');
+            header.className = 'site-header';
+            header.textContent = hostname;
+            section.appendChild(header);
+            const list = document.createElement('div');
+            list.className = 'answers-list';
+            Object.entries(answers).forEach(([key, value]) => {
+                const item = document.createElement('div');
+                item.className = 'answer-item';
+                item.innerHTML = `
+          <div class="answer-info">
+            <div class="answer-key">${key}</div>
+            <div class="answer-value">${this.truncate(String(value), 100)}</div>
+          </div>
+          <div class="answer-actions">
+            <button class="icon-btn delete-btn minus-btn" data-hostname="${hostname}" data-key="${key}" title="Remove">−</button>
+          </div>
+        `;
+                item.querySelector('.delete-btn')?.addEventListener('click', () => {
+                    this.deleteSiteSpecificAnswer(hostname, key);
+                });
+                list.appendChild(item);
+            });
+            section.appendChild(list);
+            container.appendChild(section);
+        });
+    }
+    async addCustomAnswer() {
+        const key = prompt('Enter answer key (e.g., preferredWorkLocation):');
+        if (!key)
+            return;
+        const value = prompt('Enter answer value:');
+        if (!value)
+            return;
+        await this.storage.addAnswer(key, value, false);
+        this.personalData = await this.storage.getPersonalData();
+        this.loadCustomAnswers();
+        this.updateStats();
+        this.showSuccessMessage('Custom answer added!');
+    }
+    async editCustomAnswer(key) {
+        const currentValue = this.personalData?.customAnswers?.[key];
+        const newValue = prompt('Edit answer value:', String(currentValue));
+        if (newValue !== null) {
+            await this.storage.addAnswer(key, newValue, false);
+            this.personalData = await this.storage.getPersonalData();
+            this.loadCustomAnswers();
+            this.showSuccessMessage('Answer updated!');
+        }
+    }
+    async deleteCustomAnswer(key) {
+        if (!confirm(`Delete answer "${key}"?`))
+            return;
+        await this.storage.deleteAnswer(key, false);
+        this.personalData = await this.storage.getPersonalData();
+        this.loadCustomAnswers();
+        this.updateStats();
+        this.showSuccessMessage('Answer deleted!');
+    }
+    async deleteSiteSpecificAnswer(hostname, key) {
+        if (!confirm(`Delete answer "${key}" for ${hostname}?`))
+            return;
+        await this.storage.deleteAnswer(key, true, hostname);
+        this.personalData = await this.storage.getPersonalData();
+        this.loadSiteSpecificAnswers();
+        this.updateStats();
+        this.showSuccessMessage('Answer deleted!');
+    }
+    filterAnswers() {
+        // Filter logic for search
+        const items = document.querySelectorAll('.answer-item');
+        items.forEach(item => {
+            const text = item.textContent?.toLowerCase() || '';
+            const matches = text.includes(this.searchQuery);
+            item.style.display = matches ? 'flex' : 'none';
+        });
+    }
+    async exportData() {
+        const json = await this.storage.exportData();
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `magicfill-data-${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        this.showSuccessMessage('Data exported!');
+    }
+    showImportModal() {
+        const modal = document.getElementById('importModal');
+        if (modal) {
+            modal.style.display = 'flex';
+        }
+    }
+    async importData() {
+        const textarea = document.getElementById('importJson');
+        if (!textarea)
+            return;
+        try {
+            await this.storage.importData(textarea.value);
+            this.personalData = await this.storage.getPersonalData();
+            this.loadPersonalDataTab();
+            this.updateStats();
+            this.closeImportModal();
+            this.showSuccessMessage('Data imported successfully!');
+        }
+        catch (error) {
+            alert('Invalid JSON format. Please check your data and try again.');
+        }
+    }
+    closeImportModal() {
+        const modal = document.getElementById('importModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+    updateStats() {
+        if (!this.personalData)
+            return;
+        const totalAnswers = Object.keys(this.personalData.customAnswers || {}).length;
+        const sitesConfigured = Object.keys(this.personalData.siteSpecificAnswers || {}).length;
+        const totalEl = document.getElementById('totalAnswers');
+        const sitesEl = document.getElementById('sitesConfigured');
+        if (totalEl)
+            totalEl.textContent = String(totalAnswers);
+        if (sitesEl)
+            sitesEl.textContent = String(sitesConfigured);
+    }
+    showSuccessMessage(message) {
+        const div = document.createElement('div');
+        div.className = 'success-message';
+        div.textContent = message;
+        document.body.appendChild(div);
+        setTimeout(() => {
+            div.remove();
+        }, 3000);
+    }
+    truncate(text, maxLength) {
+        if (text.length <= maxLength)
+            return text;
+        return text.substring(0, maxLength) + '...';
+    }
+}
+// Make closeImportModal available globally for the HTML onclick
+window.closeImportModal = () => {
+    const modal = document.getElementById('importModal');
+    if (modal)
+        modal.style.display = 'none';
+};
+// Initialize
+console.log('manage.ts: Script loaded, creating ManageController...');
+try {
+    new ManageController();
+}
+catch (error) {
+    console.error('manage.ts: Failed to create ManageController:', error);
+    document.body.innerHTML = `
+    <div style="padding: 20px; font-family: Arial;">
+      <h1>Error Loading MagicFill</h1>
+      <p>Failed to initialize the extension. Please check the browser console for details.</p>
+      <pre style="background: #f5f5f5; padding: 10px; border-radius: 4px;">${error}</pre>
+    </div>
+  `;
+}
+
+})();
+
+/******/ })()
+;
 //# sourceMappingURL=manage.js.map
