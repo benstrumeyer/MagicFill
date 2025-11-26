@@ -24,6 +24,7 @@
         <div class="platform-info">
           <span class="platform-label">Platform:</span>
           <span id="platformName" class="platform-name">Unknown</span>
+          <span id="scannedBadge" class="scanned-badge" style="display: none;">✓ Scanned</span>
         </div>
         <div class="profile-info">
           <span id="profileStatus" class="profile-status">No profile</span>
@@ -38,21 +39,32 @@
     </div>
 
     <div class="actions">
-      <button id="analyzeBtn" class="btn btn-analyze" style="display: none;">
-        <span class="btn-icon">🔍</span>
-        Analyze & Fill
+      <!-- Playwright Learning Mode -->
+      <div class="section-header">Playwright Mode</div>
+      <button id="learnFormBtn" class="btn btn-learn-playwright">
+        <span class="btn-icon">🎓</span>
+        Learn Form
       </button>
       
+      <button id="autoFillBtn" class="btn btn-auto-fill" disabled>
+        <span class="btn-icon">🚀</span>
+        Auto-Fill
+      </button>
+      
+      <!-- Extension Mode -->
+      <div class="section-header">Extension Mode</div>
       <button id="fillBtn" class="btn btn-primary">
         <span class="btn-icon">✨</span>
         Fill Form
       </button>
       
-      <button id="learnBtn" class="btn btn-learn">
-        <span class="btn-icon">🧠</span>
-        Learn Form (MCP)
+      <button id="saveAllBtn" class="btn btn-save">
+        <span class="btn-icon">💾</span>
+        Save All Answers
       </button>
       
+      <!-- Management -->
+      <div class="section-header">Settings</div>
       <button id="manageBtn" class="btn btn-secondary">
         <span class="btn-icon">⚙️</span>
         Manage Answers
