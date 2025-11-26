@@ -62,6 +62,17 @@ npm run build
 
 ## Troubleshooting
 
+### CAPTCHA blocking Playwright?
+**Solution: Use the extension in regular Chrome instead!**
+
+The extension works great in your regular browser:
+1. Navigate to site in regular Chrome
+2. Solve CAPTCHA normally
+3. Click extension icon → "Fill Form"
+4. Done!
+
+See `CAPTCHA-SOLUTION.md` for details.
+
 ### "Server offline" error
 - Make sure Playwright server is running
 - Check `http://localhost:3000/health` in browser

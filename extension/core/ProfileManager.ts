@@ -1,4 +1,4 @@
-import { SiteProfile } from './types';
+import { SiteProfile } from '../../shared/types';
 
 export interface ProfileCache {
   [platform: string]: SiteProfile;
