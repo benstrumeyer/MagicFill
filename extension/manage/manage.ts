@@ -19,8 +19,8 @@ class ManageController {
     try {
       console.log('ManageController: Loading personal data...');
       // Load personal data
-      this.personalData = await this.storage.getPersonalData();
       console.log('ManageController: Personal data loaded:', this.personalData);
+      this.personalData = await this.storage.getPersonalData();
       
       // Setup event listeners
       this.setupEventListeners();
@@ -164,8 +164,8 @@ class ManageController {
           <div class="answer-value">${this.truncate(String(value), 100)}</div>
         </div>
         <div class="answer-actions">
-          <button class="icon-btn edit-btn" data-key="${key}">✏️</button>
-          <button class="icon-btn delete-btn" data-key="${key}">🗑️</button>
+          <button class="icon-btn edit-btn" data-key="${key}" title="Edit">✏️</button>
+          <button class="icon-btn delete-btn minus-btn" data-key="${key}" title="Remove">−</button>
         </div>
       `;
       
@@ -217,7 +217,7 @@ class ManageController {
             <div class="answer-value">${this.truncate(String(value), 100)}</div>
           </div>
           <div class="answer-actions">
-            <button class="icon-btn delete-btn" data-hostname="${hostname}" data-key="${key}">🗑️</button>
+            <button class="icon-btn delete-btn minus-btn" data-hostname="${hostname}" data-key="${key}" title="Remove">−</button>
           </div>
         `;
         
