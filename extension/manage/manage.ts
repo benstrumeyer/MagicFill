@@ -7,20 +7,33 @@ class ManageController {
   private searchQuery: string = '';
 
   constructor() {
+    console.log('ManageController: Initializing...');
     this.storage = new Storage();
-    this.init();
+    this.init().catch(error => {
+      console.error('ManageController: Initialization failed:', error);
+      alert('Failed to initialize. Please check the console for errors.');
+    });
   }
 
   private async init() {
-    // Load personal data
-    this.personalData = await this.storage.getPersonalData();
-    
-    // Setup event listeners
-    this.setupEventListeners();
-    
-    // Load initial data
-    this.loadPersonalDataTab();
-    this.updateStats();
+    try {
+      console.log('ManageController: Loading personal data...');
+      // Load personal data
+      this.personalData = await this.storage.getPersonalData();
+      console.log('ManageController: Personal data loaded:', this.personalData);
+      
+      // Setup event listeners
+      this.setupEventListeners();
+      console.log('ManageController: Event listeners setup');
+      
+      // Load initial data
+      this.loadPersonalDataTab();
+      this.updateStats();
+      console.log('ManageController: Initialization complete');
+    } catch (error) {
+      console.error('ManageController: Error during init:', error);
+      throw error;
+    }
   }
 
   private setupEventListeners() {
@@ -357,4 +370,16 @@ class ManageController {
 };
 
 // Initialize
-new ManageController();
+console.log('manage.ts: Script loaded, creating ManageController...');
+try {
+  new ManageController();
+} catch (error) {
+  console.error('manage.ts: Failed to create ManageController:', error);
+  document.body.innerHTML = `
+    <div style="padding: 20px; font-family: Arial;">
+      <h1>Error Loading MagicFill</h1>
+      <p>Failed to initialize the extension. Please check the browser console for details.</p>
+      <pre style="background: #f5f5f5; padding: 10px; border-radius: 4px;">${error}</pre>
+    </div>
+  `;
+}

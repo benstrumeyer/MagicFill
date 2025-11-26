@@ -216,4 +216,19 @@ class PopupController {
 }
 
 // Initialize popup
-new PopupController();
+console.log('popup.ts: Script loaded, creating PopupController...');
+try {
+  new PopupController();
+  console.log('popup.ts: PopupController created successfully');
+} catch (error) {
+  console.error('popup.ts: Failed to create PopupController:', error);
+  const container = document.querySelector('.container');
+  if (container) {
+    container.innerHTML = `
+      <div style="padding: 20px;">
+        <h1 style="color: #f44336;">Error</h1>
+        <p>Failed to initialize popup. Check console for details.</p>
+      </div>
+    `;
+  }
+}
