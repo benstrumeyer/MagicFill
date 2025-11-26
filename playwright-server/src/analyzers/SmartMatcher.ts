@@ -264,9 +264,11 @@ export class SmartMatcher {
     // 4. Field Mappings (from field-mappings.json)
     if (personalData.fieldMappings) {
       for (const [key, mapping] of Object.entries(personalData.fieldMappings)) {
-        for (const pattern of mapping.patterns) {
-          if (lowerContext.includes(pattern.toLowerCase())) {
-            return { key: `fieldMappings.${key}`, value: mapping.value, confidence: 80 };
+        if (mapping && typeof mapping === 'object' && 'patterns' in mapping && 'value' in mapping) {
+          for (const pattern of mapping.patterns) {
+            if (lowerContext.includes(pattern.toLowerCase())) {
+              return { key: `fieldMappings.${key}`, value: mapping.value, confidence: 80 };
+            }
           }
         }
       }

@@ -51,3 +51,38 @@ export interface AnalysisResponse {
   error?: string;
   duration?: number;
 }
+
+export interface PersonalData {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  address2?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  country?: string;
+  currentCompany?: string;
+  currentTitle?: string;
+  yearsExperience?: number;
+  linkedin?: string;
+  github?: string;
+  portfolio?: string;
+  university?: string;
+  degree?: string;
+  major?: string;
+  graduationYear?: number;
+  workAuthorization?: string;
+  requiresSponsorship?: boolean;
+  salaryExpectation?: string;
+  startDate?: string;
+  noticePeriod?: string;
+  referral?: string;
+  howDidYouHear?: string;
+  coverLetter?: string;
+  additionalInfo?: string;
+  customAnswers?: Record<string, string>;
+  siteSpecificAnswers?: Record<string, Record<string, string>>;
+  fieldMappings?: Record<string, { value: string; patterns: string[] }>;
+}
