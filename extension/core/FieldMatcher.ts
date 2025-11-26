@@ -128,7 +128,12 @@ export class FieldMatcher {
       if ('readOnly' in el && el.readOnly) return;
       
       const context = this.getFieldContext(el);
-      const type = this.matchField(context);
+      let type = this.matchField(context);
+      
+      // Special handling for file inputs
+      if (el instanceof HTMLInputElement && el.type === 'file') {
+        type = this.detectFileType(context);
+      }
       
       // Generate stable selector
       const selector = this.generateSelector(el);
@@ -145,6 +150,28 @@ export class FieldMatcher {
     });
     
     return fields;
+  }
+
+  /**
+   * Detect what type of file upload this is
+   */
+  private detectFileType(context: string): string {
+    const lowerContext = context.toLowerCase();
+    
+    if (/resume|cv/i.test(lowerContext)) {
+      return 'resumeUpload';
+    }
+    if (/cover.*letter/i.test(lowerContext)) {
+      return 'coverLetterUpload';
+    }
+    if (/transcript/i.test(lowerContext)) {
+      return 'transcriptUpload';
+    }
+    if (/portfolio|sample|work/i.test(lowerContext)) {
+      return 'portfolioUpload';
+    }
+    
+    return 'fileUpload';
   }
 
   /**

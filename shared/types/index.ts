@@ -48,6 +48,10 @@ export interface PersonalData {
   coverLetter?: string;
   additionalInfo?: string;
   
+  // Document paths (for reference only)
+  resumePath?: string;
+  coverLetterPath?: string;
+  
   // Custom Answers
   customAnswers?: Record<string, string>;
   siteSpecificAnswers?: Record<string, Record<string, string>>;

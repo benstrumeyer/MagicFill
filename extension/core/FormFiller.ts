@@ -173,8 +173,16 @@ export class FormFiller {
   fillAllFields(fields: FormField[], personalData: PersonalData): FillResult {
     let filled = 0;
     const unrecognized: FormField[] = [];
+    const fileUploads: FormField[] = [];
     
     for (const field of fields) {
+      // Handle file uploads separately
+      if (field.inputType === 'file') {
+        fileUploads.push(field);
+        this.highlightFileUpload(field.element);
+        continue;
+      }
+      
       if (!field.type || field.type === 'unknown') {
         unrecognized.push(field);
         this.highlightUnrecognizedField(field.element);
@@ -193,11 +201,77 @@ export class FormFiller {
       }
     }
     
+    // Show notification for file uploads
+    if (fileUploads.length > 0) {
+      this.showFileUploadNotification(fileUploads);
+    }
+    
     return {
       filled,
       total: fields.length,
       unrecognized,
     };
+  }
+
+  /**
+   * Highlight a file upload field in blue
+   */
+  private highlightFileUpload(element: HTMLElement): void {
+    const originalBorder = element.style.border;
+    const originalBackground = element.style.backgroundColor;
+    const originalColor = element.style.color;
+    
+    element.style.border = '2px solid #2196F3';
+    element.style.backgroundColor = '#E3F2FD';
+    element.style.color = '#000000';
+    
+    setTimeout(() => {
+      element.style.border = originalBorder;
+      element.style.backgroundColor = originalBackground;
+      element.style.color = originalColor;
+    }, 3000);
+  }
+
+  /**
+   * Show notification for file uploads
+   */
+  private showFileUploadNotification(fileFields: FormField[]): void {
+    const fileTypes = fileFields.map(f => {
+      if (f.type === 'resumeUpload') return 'Resume';
+      if (f.type === 'coverLetterUpload') return 'Cover Letter';
+      if (f.type === 'transcriptUpload') return 'Transcript';
+      if (f.type === 'portfolioUpload') return 'Portfolio';
+      return 'File';
+    });
+    
+    const uniqueTypes = [...new Set(fileTypes)];
+    const message = `📎 Please upload: ${uniqueTypes.join(', ')}`;
+    
+    // Create notification
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      padding: 16px 24px;
+      background: #2196F3;
+      color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 999999;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      max-width: 300px;
+      animation: slideIn 0.3s ease-out;
+    `;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+      notification.style.animation = 'slideOut 0.3s ease-out';
+      setTimeout(() => notification.remove(), 300);
+    }, 5000);
   }
 
   /**
