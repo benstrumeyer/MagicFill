@@ -1,0 +1,22 @@
+{
+  "gender": {
+    "value": "Male",
+    "patterns": ["gender", "sex", "gender identity", "what is your gender"]
+  },
+  "veteran": {
+    "value": "No",
+    "patterns": ["veteran", "veteran status", "are you a veteran", "military service", "military veteran"]
+  },
+  "race": {
+    "value": "Prefer not to say",
+    "patterns": ["race", "ethnicity", "race/ethnicity", "racial background", "ethnic background"]
+  },
+  "disability": {
+    "value": "No",
+    "patterns": ["disability", "disability status", "do you have a disability", "disabled", "accommodation"]
+  },
+  "sponsorship": {
+    "value": "No",
+    "patterns": ["sponsorship", "require sponsorship", "visa sponsorship", "work authorization", "authorized to work"]
+  }
+}
