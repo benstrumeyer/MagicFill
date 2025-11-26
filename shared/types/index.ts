@@ -1,58 +1,69 @@
 /**
- * Shared type definitions for MagicFill
+ * MagicFill ✨ - Shared Type Definitions
  */
 
-// Personal Data Structure
+// ============================================================================
+// Personal Data Types
+// ============================================================================
+
 export interface PersonalData {
-  version: string;
-  lastUpdated: string;
-  
-  basic: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    linkedin?: string;
-    github?: string;
-    portfolio?: string;
-  };
-  
-  address?: {
-    street: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    country: string;
-  };
-  
-  professional?: {
-    yearsExperience: number;
-    currentTitle?: string;
-    currentCompany?: string;
-    desiredSalary?: string;
-    noticePeriod?: string;
-    startDate?: string;
-  };
-  
-  preferences?: {
-    requiresSponsorship: boolean;
-    willingToRelocate: boolean;
-    remotePreference?: string;
-    travelWillingness?: string;
-  };
-  
-  customAnswers?: Record<string, string>;
-  
-  siteSpecific?: Record<string, Record<string, string>>;
-  
-  metadata?: {
-    totalAnswers: number;
-    sitesConfigured: number;
-    lastUsed: string;
-  };
+  basic: BasicInfo;
+  address: Address;
+  professional: ProfessionalInfo;
+  preferences: Preferences;
+  customAnswers: Record<string, string>;
+  siteSpecific: Record<string, Record<string, string>>;
+  metadata: Metadata;
 }
 
+export interface BasicInfo {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  linkedin?: string;
+  github?: string;
+  portfolio?: string;
+}
+
+export interface Address {
+  street: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+}
+
+export interface ProfessionalInfo {
+  yearsExperience: number;
+  currentTitle?: string;
+  currentCompany?: string;
+  desiredSalary?: string;
+  noticePeriod?: string;
+  startDate?: string;
+}
+
+export interface Preferences {
+  requiresSponsorship: boolean;
+  willingToRelocate: boolean;
+  remotePreference?: string;
+  travelWillingness?: string;
+}
+
+export interface Metadata {
+  totalAnswers: number;
+  sitesConfigured: number;
+  formsFilledToday: number;
+  formsFilledTotal: number;
+  lastUsed: string;
+  lastBackup?: string;
+  createdAt: string;
+}
+
+// ============================================================================
 // Form Field Types
+// ============================================================================
+
 export type SemanticFieldType =
   | 'firstName'
   | 'lastName'
@@ -77,15 +88,41 @@ export type SemanticFieldType =
   | 'requiresSponsorship'
   | 'willingToRelocate'
   | 'remotePreference'
-  | 'coverLetter';
+  | 'coverLetter'
+  | 'resume';
+
+export type FieldType = 'text' | 'email' | 'tel' | 'number' | 'url' | 'date' | 'textarea' | 'select' | 'radio' | 'checkbox' | 'file';
 
 export interface FormField {
   semanticType: SemanticFieldType | string;
   selector: string;
-  type: 'text' | 'email' | 'tel' | 'select' | 'checkbox' | 'radio' | 'textarea' | 'date';
+  type: FieldType;
   foundBy: 'pattern' | 'playwright';
   lastFilled?: string;
+  lastUpdated?: string;
 }
+
+export interface DetectedField {
+  element: HTMLElement;
+  selector: string;
+  type: FieldType;
+  semanticType: SemanticFieldType | string | null;
+  context: string;
+  name?: string;
+  id?: string;
+}
+
+export interface UnrecognizedField {
+  selector: string;
+  label: string;
+  type: FieldType;
+  placeholder?: string;
+  value?: string;
+}
+
+// ============================================================================
+// Form Configuration Types
+// ============================================================================
 
 export interface FormConfig {
   urlPattern: string;
@@ -98,23 +135,10 @@ export interface FormConfig {
   multiPage: boolean;
 }
 
-// Unrecognized Field
-export interface UnrecognizedField {
-  selector: string;
-  label: string;
-  type: string;
-  placeholder?: string;
-  value?: string;
-}
+// ============================================================================
+// Extension Message Types
+// ============================================================================
 
-// Fill Result
-export interface FillResult {
-  filled: number;
-  total: number;
-  unfilledFields: UnrecognizedField[];
-}
-
-// Extension Messages
 export interface FillFormMessage {
   action: 'fill-form';
 }
@@ -129,21 +153,77 @@ export interface FillFieldMessage {
   value: string;
 }
 
-export interface FillKnownFieldsMessage {
-  action: 'fill-known-fields';
+export interface LearnFormMessage {
+  action: 'learn-form';
+  url: string;
+  formData: DetectedField[];
 }
 
 export type ExtensionMessage =
   | FillFormMessage
   | GetUnrecognizedFieldsMessage
   | FillFieldMessage
-  | FillKnownFieldsMessage;
+  | LearnFormMessage;
 
-// New Answer
-export interface NewAnswer {
-  key: string;
-  value: string;
-  question: string;
-  reusable: boolean;
-  siteSpecific?: string;
+// ============================================================================
+// Result Types
+// ============================================================================
+
+export interface FillResult {
+  filled: number;
+  total: number;
+  unfilledFields: UnrecognizedField[];
 }
+
+export interface ScanResult {
+  fields: FormField[];
+  success: boolean;
+  error?: string;
+}
+
+// ============================================================================
+// Storage Keys
+// ============================================================================
+
+export const STORAGE_KEYS = {
+  PERSONAL_DATA: 'personalData',
+  FORM_CONFIGS: 'formConfigs',
+  SETTINGS: 'settings',
+} as const;
+
+// ============================================================================
+// Default Values
+// ============================================================================
+
+export const DEFAULT_PERSONAL_DATA: PersonalData = {
+  basic: {
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+  },
+  address: {
+    street: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    country: 'United States',
+  },
+  professional: {
+    yearsExperience: 0,
+  },
+  preferences: {
+    requiresSponsorship: false,
+    willingToRelocate: false,
+  },
+  customAnswers: {},
+  siteSpecific: {},
+  metadata: {
+    totalAnswers: 0,
+    sitesConfigured: 0,
+    formsFilledToday: 0,
+    formsFilledTotal: 0,
+    lastUsed: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+  },
+};
