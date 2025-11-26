@@ -1,0 +1,41 @@
+{
+  "firstName": "John",
+  "lastName": "Doe",
+  "email": "john.doe@example.com",
+  "phone": "+1 (555) 123-4567",
+  "address": "123 Main Street",
+  "address2": "Apt 4B",
+  "city": "San Francisco",
+  "state": "CA",
+  "zipCode": "94102",
+  "country": "United States",
+  "currentCompany": "Tech Corp",
+  "currentTitle": "Senior Software Engineer",
+  "yearsExperience": 5,
+  "linkedin": "https://linkedin.com/in/johndoe",
+  "github": "https://github.com/johndoe",
+  "portfolio": "https://johndoe.dev",
+  "university": "Stanford University",
+  "degree": "Bachelor of Science",
+  "major": "Computer Science",
+  "graduationYear": 2018,
+  "workAuthorization": "US Citizen",
+  "requiresSponsorship": false,
+  "salaryExpectation": "$150,000 - $180,000",
+  "startDate": "2 weeks",
+  "noticePeriod": "2 weeks",
+  "referral": "",
+  "howDidYouHear": "LinkedIn",
+  "coverLetter": "I am excited to apply for this position because...",
+  "additionalInfo": "",
+  "customAnswers": {
+    "preferredWorkLocation": "Remote",
+    "willingToRelocate": "No",
+    "travelWillingness": "Up to 25%"
+  },
+  "siteSpecificAnswers": {
+    "greenhouse.io": {
+      "diversityQuestion": "Prefer not to answer"
+    }
+  }
+}

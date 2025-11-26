@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Answers - MagicFill</title>
+  <link rel="stylesheet" href="manage.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>✨ MagicFill - Manage Answers</h1>
+      <div class="header-actions">
+        <button id="exportBtn" class="btn btn-secondary">
+          <span class="btn-icon">📥</span>
+          Export
+        </button>
+        <button id="importBtn" class="btn btn-secondary">
+          <span class="btn-icon">📤</span>
+          Import
+        </button>
+      </div>
+    </header>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-value" id="totalAnswers">0</div>
+        <div class="stat-label">Total Answers</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="sitesConfigured">0</div>
+        <div class="stat-label">Sites Configured</div>
+      </div>
+    </div>
+
+    <div class="search-section">
+      <input type="text" id="searchInput" placeholder="Search answers..." class="search-input">
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="personal">Personal Data</button>
+      <button class="tab-btn" data-tab="custom">Custom Answers</button>
+      <button class="tab-btn" data-tab="site-specific">Site-Specific</button>
+    </div>
+
+    <div class="tab-content">
+      <!-- Personal Data Tab -->
+      <div id="personalTab" class="tab-pane active">
+        <div class="form-section">
+          <h3>Basic Information</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>First Name</label>
+              <input type="text" data-field="firstName" class="personal-field">
+            </div>
+            <div class="form-group">
+              <label>Last Name</label>
+              <input type="text" data-field="lastName" class="personal-field">
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" data-field="email" class="personal-field">
+            </div>
+            <div class="form-group">
+              <label>Phone</label>
+              <input type="tel" data-field="phone" class="personal-field">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>Address</h3>
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label>Street Address</label>
+              <input type="text" data-field="address" class="personal-field">
+            </div>
+            <div class="form-group full-width">
+              <label>Address Line 2</label>
+              <input type="text" data-field="address2" class="personal-field">
+            </div>
+            <div class="form-group">
+              <label>City</label>
+              <input type="text" data-field="city" class="personal-field">
+            </div>
+            <div class="form-group">
+              <label>State</label>
+              <input type="text" data-field="state" class="personal-field">
+            </div>
+            <div class="form-group">
+              <label>ZIP Code</label>
+              <input type="text" data-field="zipCode" class="personal-field">
+            </div>
+            <div class="form-group">
+              <label>Country</label>
+              <input type="text" data-field="country" class="personal-field">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>Professional</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Current Company</label>
+              <input type="text" data-field="currentCompany" class="personal-field">
+            </div>
+            <div class="form-group">
+              <label>Current Title</label>
+              <input type="text" data-field="currentTitle" class="personal-field">
+            </div>
+            <div class="form-group">
+              <label>Years of Experience</label>
+              <input type="number" data-field="yearsExperience" class="personal-field">
+            </div>
+            <div class="form-group">
+              <label>LinkedIn</label>
+              <input type="url" data-field="linkedin" class="personal-field">
+            </div>
+            <div class="form-group">
+              <label>GitHub</label>
+              <input type="url" data-field="github" class="personal-field">
+            </div>
+            <div class="form-group">
+              <label>Portfolio</label>
+              <input type="url" data-field="portfolio" class="personal-field">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>Education</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>University</label>
+              <input type="text" data-field="university" class="personal-field">
+            </div>
+            <div class="form-group">
+              <label>Degree</label>
+              <input type="text" data-field="degree" class="personal-field">
+            </div>
+            <div class="form-group">
+              <label>Major</label>
+              <input type="text" data-field="major" class="personal-field">
+            </div>
+            <div class="form-group">
+              <label>Graduation Year</label>
+              <input type="number" data-field="graduationYear" class="personal-field">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>Work Authorization</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Work Authorization</label>
+              <input type="text" data-field="workAuthorization" class="personal-field" placeholder="e.g., US Citizen, Green Card">
+            </div>
+            <div class="form-group">
+              <label>Requires Sponsorship</label>
+              <select data-field="requiresSponsorship" class="personal-field">
+                <option value="false">No</option>
+                <option value="true">Yes</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button id="savePersonalBtn" class="btn btn-primary">Save Changes</button>
+        </div>
+      </div>
+
+      <!-- Custom Answers Tab -->
+      <div id="customTab" class="tab-pane">
+        <div class="answers-list" id="customAnswersList"></div>
+        <button id="addCustomBtn" class="btn btn-secondary add-answer-btn">+ Add Custom Answer</button>
+      </div>
+
+      <!-- Site-Specific Tab -->
+      <div id="siteSpecificTab" class="tab-pane">
+        <div id="sitesList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Modal -->
+  <div id="importModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Import Personal Data</h2>
+        <button class="close-btn" onclick="closeImportModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <textarea id="importJson" rows="10" placeholder="Paste your JSON data here..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeImportModal()">Cancel</button>
+        <button id="confirmImportBtn" class="btn btn-primary">Import</button>
+      </div>
+    </div>
+  </div>
+
+  <input type="file" id="fileInput" accept=".json" style="display: none;">
+
+  <script src="manage.js"></script>
+</body>
+</html>

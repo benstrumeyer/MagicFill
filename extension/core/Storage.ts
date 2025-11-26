@@ -1,0 +1,140 @@
+import { PersonalData } from '../../shared/types';
+
+export class Storage {
+  /**
+   * Get a value from chrome.storage.local
+   */
+  async get<T>(key: string): Promise<T | null> {
+    return new Promise((resolve) => {
+      chrome.storage.local.get([key], (result) => {
+        resolve(result[key] || null);
+      });
+    });
+  }
+
+  /**
+   * Set a value in chrome.storage.local
+   */
+  async set<T>(key: string, value: T): Promise<void> {
+    return new Promise((resolve) => {
+      chrome.storage.local.set({ [key]: value }, () => {
+        resolve();
+      });
+    });
+  }
+
+  /**
+   * Get personal data
+   */
+  async getPersonalData(): Promise<PersonalData> {
+    const data = await this.get<PersonalData>('personalData');
+    return data || this.getDefaultPersonalData();
+  }
+
+  /**
+   * Set personal data
+   */
+  async setPersonalData(data: PersonalData): Promise<void> {
+    await this.set('personalData', data);
+  }
+
+  /**
+   * Add a custom answer dynamically
+   */
+  async addAnswer(key: string, value: string, siteSpecific: boolean = false): Promise<void> {
+    const data = await this.getPersonalData();
+    
+    if (!data.customAnswers) {
+      data.customAnswers = {};
+    }
+    
+    if (siteSpecific) {
+      const hostname = window.location.hostname;
+      if (!data.siteSpecificAnswers) {
+        data.siteSpecificAnswers = {};
+      }
+      if (!data.siteSpecificAnswers[hostname]) {
+        data.siteSpecificAnswers[hostname] = {};
+      }
+      data.siteSpecificAnswers[hostname][key] = value;
+    } else {
+      data.customAnswers[key] = value;
+    }
+    
+    await this.setPersonalData(data);
+  }
+
+  /**
+   * Get default personal data structure
+   */
+  private getDefaultPersonalData(): PersonalData {
+    return {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      address: '',
+      address2: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      country: 'United States',
+      currentCompany: '',
+      currentTitle: '',
+      yearsExperience: 0,
+      linkedin: '',
+      github: '',
+      portfolio: '',
+      university: '',
+      degree: '',
+      major: '',
+      graduationYear: 0,
+      workAuthorization: '',
+      requiresSponsorship: false,
+      salaryExpectation: '',
+      startDate: '',
+      noticePeriod: '',
+      referral: '',
+      howDidYouHear: '',
+      coverLetter: '',
+      additionalInfo: '',
+      customAnswers: {},
+      siteSpecificAnswers: {},
+    };
+  }
+
+  /**
+   * Export personal data as JSON
+   */
+  async exportData(): Promise<string> {
+    const data = await this.getPersonalData();
+    return JSON.stringify(data, null, 2);
+  }
+
+  /**
+   * Import personal data from JSON
+   */
+  async importData(json: string): Promise<void> {
+    try {
+      const data = JSON.parse(json) as PersonalData;
+      await this.setPersonalData(data);
+    } catch (error) {
+      throw new Error('Invalid JSON format');
+    }
+  }
+
+  /**
+   * Delete a custom answer
+   */
+  async deleteAnswer(key: string, siteSpecific: boolean = false, hostname?: string): Promise<void> {
+    const data = await this.getPersonalData();
+    
+    if (siteSpecific && hostname && data.siteSpecificAnswers?.[hostname]) {
+      delete data.siteSpecificAnswers[hostname][key];
+    } else if (data.customAnswers) {
+      delete data.customAnswers[key];
+    }
+    
+    await this.setPersonalData(data);
+  }
+}
