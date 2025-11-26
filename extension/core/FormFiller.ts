@@ -135,14 +135,36 @@ export class FormFiller {
   private highlightField(element: HTMLElement): void {
     const originalBorder = element.style.border;
     const originalBackground = element.style.backgroundColor;
+    const originalColor = element.style.color;
     
     element.style.border = '2px solid #4CAF50';
     element.style.backgroundColor = '#E8F5E9';
+    element.style.color = '#000000';
     
     setTimeout(() => {
       element.style.border = originalBorder;
       element.style.backgroundColor = originalBackground;
+      element.style.color = originalColor;
     }, 1000);
+  }
+
+  /**
+   * Highlight an unrecognized field in red
+   */
+  private highlightUnrecognizedField(element: HTMLElement): void {
+    const originalBorder = element.style.border;
+    const originalBackground = element.style.backgroundColor;
+    const originalColor = element.style.color;
+    
+    element.style.border = '2px solid #f44336';
+    element.style.backgroundColor = '#ffebee';
+    element.style.color = '#000000';
+    
+    setTimeout(() => {
+      element.style.border = originalBorder;
+      element.style.backgroundColor = originalBackground;
+      element.style.color = originalColor;
+    }, 2000);
   }
 
   /**
@@ -155,6 +177,7 @@ export class FormFiller {
     for (const field of fields) {
       if (!field.type || field.type === 'unknown') {
         unrecognized.push(field);
+        this.highlightUnrecognizedField(field.element);
         continue;
       }
       
@@ -166,6 +189,7 @@ export class FormFiller {
         if (success) filled++;
       } else {
         unrecognized.push(field);
+        this.highlightUnrecognizedField(field.element);
       }
     }
     
