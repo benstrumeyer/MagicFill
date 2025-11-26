@@ -28,7 +28,35 @@ export class Storage {
    */
   async getPersonalData(): Promise<PersonalData> {
     const data = await this.get<PersonalData>('personalData');
+    
+    // If no data exists, try to load dev data
+    if (!data || Object.keys(data).length === 0 || !data.firstName) {
+      const devData = await this.loadDevData();
+      if (devData) {
+        console.log('Storage: Loaded dev-data.json for testing');
+        await this.setPersonalData(devData);
+        return devData;
+      }
+    }
+    
     return data || this.getDefaultPersonalData();
+  }
+
+  /**
+   * Load development data from dev-data.json (for testing)
+   */
+  private async loadDevData(): Promise<PersonalData | null> {
+    try {
+      const response = await fetch(chrome.runtime.getURL('dev-data.json'));
+      if (response.ok) {
+        const data = await response.json();
+        return data as PersonalData;
+      }
+    } catch (error) {
+      // dev-data.json doesn't exist, that's fine
+      console.log('Storage: No dev-data.json found (this is normal for production)');
+    }
+    return null;
   }
 
   /**

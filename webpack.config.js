@@ -40,7 +40,8 @@ module.exports = {
         { from: 'extension/popup/popup.html', to: 'popup.html' },
         { from: 'extension/popup/popup.css', to: 'popup.css' },
         { from: 'extension/manage/manage.html', to: 'manage.html' },
-        { from: 'extension/manage/manage.css', to: 'manage.css' }
+        { from: 'extension/manage/manage.css', to: 'manage.css' },
+        { from: 'dev-data.json', to: 'dev-data.json', noErrorOnMissing: true }
       ]
     })
   ],
