@@ -211,7 +211,7 @@ class PopupController {
   }
 
   private openManageAnswers() {
-    chrome.tabs.create({ url: chrome.runtime.getURL('manage/manage.html') });
+    chrome.tabs.create({ url: chrome.runtime.getURL('manage.html') });
   }
 }
 
