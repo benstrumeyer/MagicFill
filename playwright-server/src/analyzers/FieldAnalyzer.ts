@@ -6,7 +6,19 @@ export class FieldAnalyzer {
     console.log('🔍 Analyzing form fields...');
     
     const fields = await page.evaluate(() => {
-      const results: Record<string, FieldProfile> = {};
+      // Helper function to detect custom dropdowns
+      function detectCustomDropdown(element: Element): boolean {
+        const parent = element.closest('div, fieldset');
+        if (!parent) return false;
+        
+        const hasDropdownClass = parent.className.match(/dropdown|select|picker/i);
+        const hasArrowIcon = parent.querySelector('[class*="arrow"], [class*="chevron"], [class*="caret"]');
+        const hasOptionsContainer = parent.querySelector('[class*="options"], [class*="menu"], [class*="list"]');
+        
+        return !!(hasDropdownClass || hasArrowIcon || hasOptionsContainer);
+      }
+      
+      const results: Record<string, any> = {};
       
       // Find all form fields
       const elements = document.querySelectorAll('input, select, textarea');
@@ -44,7 +56,7 @@ export class FieldAnalyzer {
         }
         
         // Check if this is a custom dropdown
-        const isCustomDropdown = this.detectCustomDropdown(element);
+        const isCustomDropdown = detectCustomDropdown(element);
         
         results[key] = {
           selector,
@@ -59,20 +71,6 @@ export class FieldAnalyzer {
       });
       
       return results;
-      
-      // Helper function (defined in evaluate context)
-      function detectCustomDropdown(element: Element): boolean {
-        // Check for common custom dropdown patterns
-        const parent = element.closest('div, fieldset');
-        if (!parent) return false;
-        
-        // Look for dropdown indicators
-        const hasDropdownClass = parent.className.match(/dropdown|select|picker/i);
-        const hasArrowIcon = parent.querySelector('[class*="arrow"], [class*="chevron"], [class*="caret"]');
-        const hasOptionsContainer = parent.querySelector('[class*="options"], [class*="menu"], [class*="list"]');
-        
-        return !!(hasDropdownClass || hasArrowIcon || hasOptionsContainer);
-      }
     });
     
     console.log(`✓ Found ${Object.keys(fields).length} fields`);
@@ -103,7 +101,7 @@ export class FieldAnalyzer {
         for (const sel of optionsSelectors) {
           const elements = document.querySelectorAll(sel);
           if (elements.length > 0) {
-            options = Array.from(elements).map(el => el.textContent?.trim() || '');
+            options = Array.from(elements).map((el: Element) => el.textContent?.trim() || '');
             optionsSelector = sel;
             break;
           }
