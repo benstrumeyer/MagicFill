@@ -10,6 +10,7 @@ class PopupController {
   private async init() {
     // Setup event listeners
     document.getElementById('fillBtn')?.addEventListener('click', () => this.fillForm());
+    document.getElementById('learnBtn')?.addEventListener('click', () => this.learnForm());
     document.getElementById('manageBtn')?.addEventListener('click', () => this.openManageAnswers());
     document.getElementById('closeModal')?.addEventListener('click', () => this.closeModal());
     document.getElementById('cancelBtn')?.addEventListener('click', () => this.closeModal());
@@ -208,6 +209,32 @@ class PopupController {
   private truncate(text: string, maxLength: number): string {
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
+  }
+
+  private async learnForm() {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      
+      if (!tab.id) return;
+
+      this.showStatus('🧠', 'Learning form...', 'success');
+
+      const message: ExtensionMessage = {
+        action: 'learnForm',
+      };
+
+      const result = await chrome.tabs.sendMessage(tab.id, message);
+      
+      if (result.success) {
+        this.showStatus('✅', `Learned ${result.fieldsLearned} fields!`, 'success');
+        await this.updateStatus();
+      } else {
+        this.showStatus('❌', result.error || 'Learning failed', 'error');
+      }
+    } catch (error) {
+      this.showStatus('❌', 'MCP server not running', 'error');
+      console.error('Learn error:', error);
+    }
   }
 
   private openManageAnswers() {

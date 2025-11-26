@@ -114,6 +114,15 @@ h1 {
   background: #f9f9f9;
 }
 
+.btn-learn {
+  background: #9C27B0;
+  color: white;
+}
+
+.btn-learn:hover {
+  background: #7B1FA2;
+}
+
 .btn-icon {
   font-size: 16px;
 }

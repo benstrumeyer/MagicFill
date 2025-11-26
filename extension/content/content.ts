@@ -1,18 +1,21 @@
 import { FieldMatcher } from '../core/FieldMatcher';
 import { FormFiller } from '../core/FormFiller';
 import { Storage } from '../core/Storage';
+import { MCPClient } from '../core/MCPClient';
 import { ExtensionMessage, FormField } from '../../shared/types';
 
 class ContentScript {
   private fieldMatcher: FieldMatcher;
   private formFiller: FormFiller;
   private storage: Storage;
+  private mcpClient: MCPClient;
   private lastFillResult: { filled: number; total: number; unrecognized: FormField[] } | null = null;
 
   constructor() {
     this.fieldMatcher = new FieldMatcher();
     this.formFiller = new FormFiller();
     this.storage = new Storage();
+    this.mcpClient = new MCPClient();
     
     this.init();
   }
@@ -63,7 +66,56 @@ class ContentScript {
       return { success: false, error: 'Missing key or value' };
     }
     
+    if (action === 'learnForm') {
+      return await this.learnForm();
+    }
+    
     return { success: false, error: 'Unknown action' };
+  }
+
+  /**
+   * Learn form using MCP server
+   */
+  private async learnForm() {
+    try {
+      // Check if MCP server is running
+      const isRunning = await this.mcpClient.isServerRunning();
+      
+      if (!isRunning) {
+        return {
+          success: false,
+          error: 'MCP server not running. Start it with: cd mcp-server && npm run dev'
+        };
+      }
+      
+      this.showNotification('🔍 Learning form...', 'info');
+      
+      // Scan the page
+      const scanResult = await this.mcpClient.scanPage(window.location.href);
+      
+      if (!scanResult.success) {
+        return { success: false, error: 'Failed to scan page' };
+      }
+      
+      this.showNotification(`✅ Learned ${scanResult.fields.length} fields!`, 'success');
+      
+      // Retry filling with new knowledge
+      setTimeout(() => {
+        this.autoFill();
+      }, 1000);
+      
+      return {
+        success: true,
+        fieldsLearned: scanResult.fields.length
+      };
+      
+    } catch (error) {
+      console.error('Learn form error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
   }
 
   private async autoFill() {

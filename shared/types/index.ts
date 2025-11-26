@@ -84,7 +84,7 @@ export interface UnrecognizedField {
 // ============================================================================
 
 export interface ExtensionMessage {
-  action: 'fillForm' | 'getUnrecognizedFields' | 'fillField' | 'addAnswer';
+  action: 'fillForm' | 'getUnrecognizedFields' | 'fillField' | 'addAnswer' | 'learnForm';
   payload?: {
     selector?: string;
     value?: string;
