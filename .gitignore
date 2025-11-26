@@ -1,5 +1,7 @@
 # Dependencies
 node_modules/
+playwright-helper/node_modules/
+playwright-helper/.env
 
 # Build output
 extension/dist/
