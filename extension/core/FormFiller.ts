@@ -149,6 +149,13 @@ export class FormFiller {
   }
 
   /**
+   * Public method to highlight field green (for external use)
+   */
+  highlightFieldGreen(element: HTMLElement): void {
+    this.highlightField(element);
+  }
+
+  /**
    * Highlight an unrecognized field in red
    */
   private highlightUnrecognizedField(element: HTMLElement): void {
@@ -170,32 +177,43 @@ export class FormFiller {
   /**
    * Fill all fields on the page
    */
-  fillAllFields(fields: FormField[], personalData: PersonalData): FillResult {
+  fillAllFields(fields: FormField[], personalData: PersonalData, fieldMatcher: any): FillResult {
+    console.log('=== FILL ALL FIELDS ===');
+    console.log('Total fields found:', fields.length);
+    console.log('Custom answers available:', Object.keys(personalData.customAnswers || {}).length);
+    console.log('Custom answer keys:', Object.keys(personalData.customAnswers || {}));
+    
     let filled = 0;
     const unrecognized: FormField[] = [];
     const fileUploads: FormField[] = [];
     
     for (const field of fields) {
+      console.log(`\nProcessing field:`, {
+        selector: field.selector,
+        type: field.type,
+        context: field.context,
+        fieldType: field.fieldType
+      });
+      
       // Handle file uploads separately
       if (field.inputType === 'file') {
+        console.log('→ File upload, skipping');
         fileUploads.push(field);
         this.highlightFileUpload(field.element);
         continue;
       }
       
-      if (!field.type || field.type === 'unknown') {
-        unrecognized.push(field);
-        this.highlightUnrecognizedField(field.element);
-        continue;
-      }
+      // Get value from personal data (pass field for context matching)
+      // Even for unknown types, try to match using field mappings and custom answers
+      console.log('→ Getting value for type:', field.type || 'unknown');
+      const value = this.getValueForField(field.type || 'unknown', personalData, field, fieldMatcher);
+      console.log('→ Value found:', value);
       
-      // Get value from personal data
-      const value = this.getValueForField(field.type, personalData);
-      
-      if (value !== null && value !== undefined) {
+      if (value !== null && value !== undefined && value !== '') {
         const success = this.fillField(field, value);
         if (success) filled++;
       } else {
+        console.log('→ No value found, marking as unrecognized');
         unrecognized.push(field);
         this.highlightUnrecognizedField(field.element);
       }
@@ -275,12 +293,85 @@ export class FormFiller {
   }
 
   /**
+   * Match field context to custom answer keys
+   */
+  private matchContextToCustomAnswers(context: string, customAnswers: Record<string, string>): string | null {
+    console.log('  Fuzzy matching context:', context);
+    console.log('  Against keys:', Object.keys(customAnswers));
+    
+    const lowerContext = context.toLowerCase();
+    const normalizedContext = lowerContext.replace(/[^a-z0-9]/g, '');
+    
+    // Try exact match first (case-insensitive, normalized)
+    for (const key of Object.keys(customAnswers)) {
+      const normalizedKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (normalizedKey === normalizedContext) {
+        console.log('  ✓ Exact normalized match found:', key);
+        return key;
+      }
+    }
+    
+    // Try fuzzy matching - check if context contains the key or key contains context words
+    for (const key of Object.keys(customAnswers)) {
+      const lowerKey = key.toLowerCase();
+      
+      // Convert camelCase to words (e.g., "whatIsYourGender" → ["what", "is", "your", "gender"])
+      const keyWords = lowerKey
+        .replace(/([A-Z])/g, ' $1')
+        .toLowerCase()
+        .split(/\s+/)
+        .filter(w => w.length > 2); // Filter out short words like "is", "a", etc.
+      
+      // Extract meaningful words from context
+      const contextWords = lowerContext
+        .split(/\s+/)
+        .filter(w => w.length > 2);
+      
+      console.log(`  Checking key "${key}":`, { keyWords, contextWords });
+      
+      // Check if most key words are in context
+      const matchCount = keyWords.filter(kw => 
+        contextWords.some(cw => cw.includes(kw) || kw.includes(cw))
+      ).length;
+      
+      // Lower threshold to 50% for better matching
+      const threshold = Math.max(1, Math.ceil(keyWords.length * 0.5));
+      console.log(`  Match count: ${matchCount}/${keyWords.length}, threshold: ${threshold}`);
+      
+      if (matchCount >= threshold && keyWords.length > 0) {
+        console.log('  ✓ Fuzzy match found:', key);
+        return key;
+      }
+    }
+    
+    console.log('  ✗ No match found');
+    return null;
+  }
+
+  /**
    * Get value from personal data for a field type
    */
-  private getValueForField(type: string, data: PersonalData): string | boolean | null {
-    // Check custom answers first
+  getValueForField(type: string, data: PersonalData, field?: FormField, fieldMatcher?: any): string | boolean | null {
+    // Check field mappings FIRST (highest priority for scale)
+    if (field && data.fieldMappings && fieldMatcher) {
+      const mappingKey = fieldMatcher.matchFieldToMapping(field.context, data.fieldMappings);
+      if (mappingKey && data.fieldMappings[mappingKey]) {
+        console.log(`  ✓ Using field mapping: ${mappingKey} = ${data.fieldMappings[mappingKey].value}`);
+        return data.fieldMappings[mappingKey].value;
+      }
+    }
+    
+    // Check custom answers - exact match
     if (data.customAnswers && data.customAnswers[type]) {
       return data.customAnswers[type];
+    }
+    
+    // If type is unknown, try to match field context against custom answer keys
+    if (type === 'unknown' && field && data.customAnswers) {
+      const matchedKey = this.matchContextToCustomAnswers(field.context, data.customAnswers);
+      if (matchedKey) {
+        return data.customAnswers[matchedKey];
+      }
     }
     
     // Map to personal data fields

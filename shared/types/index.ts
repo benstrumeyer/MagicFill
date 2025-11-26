@@ -55,6 +55,22 @@ export interface PersonalData {
   // Custom Answers
   customAnswers?: Record<string, string>;
   siteSpecificAnswers?: Record<string, Record<string, string>>;
+  
+  // Field Mappings (rule-based)
+  fieldMappings?: FieldMappings;
+}
+
+// ============================================================================
+// Field Mapping Types
+// ============================================================================
+
+export interface FieldMapping {
+  value: string;
+  patterns: string[];
+}
+
+export interface FieldMappings {
+  [key: string]: FieldMapping;
 }
 
 // ============================================================================
@@ -80,11 +96,56 @@ export interface UnrecognizedField {
 }
 
 // ============================================================================
+// Site Profile Types (Playwright Integration)
+// ============================================================================
+
+export interface FieldProfile {
+  selector: string;
+  type: string;
+  name?: string;
+  id?: string;
+  label?: string;
+  placeholder?: string;
+  required?: boolean;
+  
+  // Custom dropdown info
+  isCustomDropdown?: boolean;
+  dropdownStrategy?: 'click-input' | 'click-button' | 'hover';
+  optionsSelector?: string;
+  options?: string[];
+  
+  // Hidden field relationships
+  hasHiddenSelect?: boolean;
+  hiddenSelectSelector?: string;
+}
+
+export interface PageInfo {
+  name: string;
+  fields: string[];
+  nextButton?: string;
+  submitButton?: string;
+}
+
+export interface SiteProfile {
+  platform: string;
+  url: string;
+  timestamp: string;
+  
+  fields: Record<string, FieldProfile>;
+  pages?: PageInfo[];
+  
+  // Metadata
+  totalFields: number;
+  hasMultiPage: boolean;
+  customDropdownCount: number;
+}
+
+// ============================================================================
 // Extension Message Types
 // ============================================================================
 
 export interface ExtensionMessage {
-  action: 'fillForm' | 'getUnrecognizedFields' | 'fillField' | 'addAnswer' | 'learnForm';
+  action: 'fillForm' | 'getUnrecognizedFields' | 'fillField' | 'addAnswer' | 'learnForm' | 'analyzeAndFill';
   payload?: {
     selector?: string;
     value?: string;

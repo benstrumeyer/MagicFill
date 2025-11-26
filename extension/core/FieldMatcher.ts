@@ -113,6 +113,24 @@ export class FieldMatcher {
   }
 
   /**
+   * Match field context to field mappings (rule-based)
+   */
+  matchFieldToMapping(context: string, mappings: Record<string, { value: string; patterns: string[] }>): string | null {
+    const lowerContext = context.toLowerCase();
+    
+    for (const [key, mapping] of Object.entries(mappings)) {
+      for (const pattern of mapping.patterns) {
+        if (lowerContext.includes(pattern.toLowerCase())) {
+          console.log(`  ✓ Mapping matched: "${key}" via pattern "${pattern}"`);
+          return key;
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  /**
    * Find all fillable fields on the page
    */
   findAllFields(): FormField[] {

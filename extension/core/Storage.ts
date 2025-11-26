@@ -39,7 +39,31 @@ export class Storage {
       }
     }
     
-    return data || this.getDefaultPersonalData();
+    const result = data || this.getDefaultPersonalData();
+    
+    // Load field mappings if not present
+    if (!result.fieldMappings) {
+      result.fieldMappings = await this.loadFieldMappings();
+    }
+    
+    return result;
+  }
+
+  /**
+   * Load field mappings from field-mappings.json
+   */
+  private async loadFieldMappings(): Promise<Record<string, { value: string; patterns: string[] }>> {
+    try {
+      const response = await fetch(chrome.runtime.getURL('field-mappings.json'));
+      if (response.ok) {
+        const mappings = await response.json();
+        console.log('Storage: Loaded field-mappings.json');
+        return mappings;
+      }
+    } catch (error) {
+      console.log('Storage: No field-mappings.json found');
+    }
+    return {};
   }
 
   /**
