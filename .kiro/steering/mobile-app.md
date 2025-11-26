@@ -2,11 +2,13 @@
 inclusion: always
 ---
 
-# SmartFormFiller Mobile App (React Native)
+# MagicFill Mobile App ✨📱 (React Native)
 
 ## 🎯 Vision
 
 Apply to jobs on mobile with the same auto-fill magic as the desktop extension.
+
+**MagicFill Mobile** - The magic in your pocket! ✨📱
 
 ## 📱 Use Case
 
@@ -74,7 +76,7 @@ React Native App with:
 ## 📱 App Structure (Option 1 - WebView)
 
 ```
-SmartFormFiller-Mobile/
+MagicFill-Mobile/
 ├── src/
 │   ├── screens/
 │   │   ├── HomeScreen.tsx          # Job search
@@ -102,7 +104,7 @@ SmartFormFiller-Mobile/
 ### Home Screen
 ```
 ┌─────────────────────────────────────┐
-│  🤖 SmartFormFiller                 │
+│  ✨ MagicFill                       │
 │                                     │
 │  Quick Links                        │
 │  ┌─────────────────────────────┐   │

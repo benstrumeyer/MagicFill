@@ -2,7 +2,7 @@
 inclusion: always
 ---
 
-# SmartFormFiller Architecture
+# MagicFill ✨ Architecture
 
 ## 🎯 Core Philosophy
 
@@ -122,7 +122,7 @@ shared/
 ## 📁 Project Structure
 
 ```
-SmartFormFiller/
+MagicFill/
 ├── extension/              # Chrome Extension (TypeScript)
 │   ├── src/
 │   │   ├── content/

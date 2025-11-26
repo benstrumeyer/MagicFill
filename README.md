@@ -1,4 +1,4 @@
-# SmartFormFiller
+# MagicFill ✨
 
 **Auto-fill job applications with one click. Learn new forms automatically.**
 

@@ -1,4 +1,4 @@
-# SmartFormFiller - Development Tasks
+# MagicFill ✨ - Development Tasks
 
 ## 📋 Phase 1: Core Extension (Week 1-2)
 
