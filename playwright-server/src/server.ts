@@ -116,15 +116,47 @@ app.post('/learn-form', async (req, res) => {
   console.log(`\n🎓 Learning mode request: ${url}`);
   
   try {
-    // Launch visible browser
+    // Launch visible browser with stealth settings
     console.log('🚀 Launching browser in learning mode...');
     const learnBrowser = await chromium.launch({ 
       headless: false,
-      slowMo: 50
+      slowMo: 50,
+      args: [
+        '--disable-blink-features=AutomationControlled',
+        '--disable-dev-shm-usage',
+        '--no-sandbox'
+      ]
     });
     
-    const context = await learnBrowser.newContext();
+    const context = await learnBrowser.newContext({
+      // Make it look like a real browser
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      viewport: { width: 1920, height: 1080 },
+      locale: 'en-US',
+      timezoneId: 'America/New_York'
+    });
     const page = await context.newPage();
+    
+    // Hide automation indicators
+    await page.addInitScript(() => {
+      // Override navigator.webdriver
+      Object.defineProperty(navigator, 'webdriver', {
+        get: () => false,
+      });
+      
+      // Override chrome property
+      (window as any).chrome = {
+        runtime: {},
+      };
+      
+      // Override permissions
+      const originalQuery = window.navigator.permissions.query;
+      window.navigator.permissions.query = (parameters: any) => (
+        parameters.name === 'notifications' ?
+          Promise.resolve({ state: Notification.permission } as PermissionStatus) :
+          originalQuery(parameters)
+      );
+    });
     
     // Storage for learned fields
     const learnedFields: any[] = [];
@@ -138,7 +170,25 @@ app.post('/learn-form', async (req, res) => {
     // Navigate to URL
     console.log(`🌐 Navigating to ${url}...`);
     await page.goto(url, { waitUntil: 'networkidle' });
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(2000);
+    
+    // Check for CAPTCHA and wait for user to solve it
+    const hasCaptcha = await page.evaluate(() => {
+      const captchaSelectors = [
+        'iframe[src*="recaptcha"]',
+        'iframe[src*="hcaptcha"]',
+        '[class*="captcha"]',
+        '[id*="captcha"]'
+      ];
+      return captchaSelectors.some(selector => document.querySelector(selector) !== null);
+    });
+    
+    if (hasCaptcha) {
+      console.log('⚠️  CAPTCHA detected! Please solve it in the browser...');
+      console.log('⏳ Waiting 30 seconds for you to solve CAPTCHA...');
+      await page.waitForTimeout(30000); // Wait 30 seconds
+      console.log('✓ Continuing...');
+    }
     
     // Inject learning script
     console.log('💉 Injecting learning script...');
@@ -206,15 +256,33 @@ app.post('/auto-fill', async (req, res) => {
       }
     }
     
-    // Launch visible browser
+    // Launch visible browser with stealth settings
     console.log('🚀 Launching visible browser...');
     const fillBrowser = await chromium.launch({ 
       headless: false,
-      slowMo: 50
+      slowMo: 50,
+      args: [
+        '--disable-blink-features=AutomationControlled',
+        '--disable-dev-shm-usage',
+        '--no-sandbox'
+      ]
     });
     
-    const context = await fillBrowser.newContext();
+    const context = await fillBrowser.newContext({
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      viewport: { width: 1920, height: 1080 },
+      locale: 'en-US',
+      timezoneId: 'America/New_York'
+    });
     const page = await context.newPage();
+    
+    // Hide automation indicators
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'webdriver', {
+        get: () => false,
+      });
+      (window as any).chrome = { runtime: {} };
+    });
     
     console.log(`🌐 Navigating to ${url}...`);
     await page.goto(url, { waitUntil: 'networkidle' });
